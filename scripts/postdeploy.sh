@@ -30,6 +30,18 @@ case "$IMAGE" in
     ;;
 esac
 
+# Deliberately configured here rather than in Bicep: declaring the registry on the
+# job at creation time deadlocks, because the job's identity cannot be granted
+# AcrPull until the job exists.
+REGISTRY=$(printf '%s' "$IMAGE" | cut -d/ -f1)
+echo "postdeploy: linking $MIGRATION_JOB_NAME to $REGISTRY via managed identity"
+az containerapp job registry set \
+  --resource-group "$AZURE_RESOURCE_GROUP" \
+  --name "$MIGRATION_JOB_NAME" \
+  --server "$REGISTRY" \
+  --identity system \
+  --output none || fail "could not link the migration job to $REGISTRY"
+
 echo "postdeploy: pointing $MIGRATION_JOB_NAME at $IMAGE"
 az containerapp job update \
   --resource-group "$AZURE_RESOURCE_GROUP" \
@@ -68,6 +80,7 @@ while [ "$ATTEMPTS" -lt 60 ]; do
         --resource-group "$AZURE_RESOURCE_GROUP" \
         --name "$MIGRATION_JOB_NAME" \
         --execution "$EXECUTION" \
+        --container migrate \
         --tail 100 2>&1 || true
       fail "migrations failed"
       ;;

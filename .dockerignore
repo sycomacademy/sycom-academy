@@ -26,6 +26,14 @@ docker-compose.yml
 infra
 .azure
 
+# Agent and editor config. .claude/skills contains symlinks to directories, which
+# the remote build context packer cannot follow.
+.claude
+.agents
+.cursor
+.github
+.vscode
+
 # Secrets stay out of image layers; runtime env comes from compose env_file,
 # build-time public values come from compose build args
 **/.env

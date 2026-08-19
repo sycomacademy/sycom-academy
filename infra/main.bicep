@@ -146,7 +146,6 @@ module migrationJob './modules/migration-job.bicep' = {
   params: {
     name: '${resourcePrefix}-migrate'
     containerAppsEnvironmentId: containerAppsEnvironment.outputs.id
-    registryLoginServer: containerRegistry.outputs.loginServer
     databaseUrl: databaseUrl
     location: location
     tags: tags

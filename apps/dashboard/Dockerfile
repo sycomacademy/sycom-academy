@@ -5,7 +5,9 @@ ENV SKIP_ENV_VALIDATION=1
 ENV BETTER_AUTH_SECRET=build-time-placeholder-secret-not-used-at-runtime
 
 COPY . .
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install
+# No BuildKit cache mount: ACR Tasks builds with the classic Docker builder and
+# rejects --mount. Docker layer caching still covers unchanged lockfiles.
+RUN bun install
 
 ENV NODE_ENV=production
 RUN cd apps/dashboard && bun run build

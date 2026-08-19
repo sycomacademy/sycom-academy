@@ -6,9 +6,6 @@ param name string
 
 param containerAppsEnvironmentId string
 
-@description('Login server of the registry holding the application image.')
-param registryLoginServer string
-
 @secure()
 param databaseUrl string
 
@@ -38,12 +35,10 @@ resource job 'Microsoft.App/jobs@2024-03-01' = {
         parallelism: 1
         replicaCompletionCount: 1
       }
-      registries: [
-        {
-          server: registryLoginServer
-          identity: 'system'
-        }
-      ]
+      // No registries block, for the same reason as the container app: the job's
+      // system identity cannot hold AcrPull until the job exists, so declaring
+      // the registry here deadlocks resource creation. scripts/postdeploy.sh
+      // wires it up once the grant is in place.
       secrets: [
         {
           name: 'database-url'
@@ -65,7 +60,7 @@ resource job 'Microsoft.App/jobs@2024-03-01' = {
             '-c'
           ]
           args: [
-            'node /app/scripts/migrate.mjs'
+            'node /app/packages/db/migrate.mjs'
           ]
           env: [
             {

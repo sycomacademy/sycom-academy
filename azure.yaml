@@ -22,6 +22,15 @@ services:
       remoteBuild: true
 
 hooks:
+  # azd does not create the ACR/managed-identity link itself, so the first
+  # revision pointing at an ACR image fails to pull. See scripts/predeploy.sh.
+  predeploy:
+    posix:
+      shell: sh
+      run: ./scripts/predeploy.sh
+      interactive: true
+      continueOnError: false
+
   # Migrations run inside the VNet via a Container Apps job, because Postgres has
   # no public endpoint. See scripts/postdeploy.sh.
   postdeploy:
