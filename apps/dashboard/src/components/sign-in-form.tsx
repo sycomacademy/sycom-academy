@@ -3,7 +3,7 @@ import { Input } from "@sycom-learn/ui/components/input";
 import { Label } from "@sycom-learn/ui/components/label";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { toastManager } from "@sycom-learn/ui/components/toast";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
@@ -32,10 +32,13 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
             navigate({
               to: "/dashboard",
             });
-            toast.success("Sign in successful");
+            toastManager.add({ title: "Sign in successful", type: "success" });
           },
           onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
+            toastManager.add({
+              title: error.error.message || error.error.statusText,
+              type: "error",
+            });
           },
         },
       );

@@ -11,14 +11,19 @@
     "prefix": ""
   },
   "iconLibrary": "lucide",
+  "menuColor": "default",
+  "menuAccent": "subtle",
   "aliases": {
     "components": "@sycom-learn/ui/components",
     "utils": "@sycom-learn/ui/lib/utils",
-    "hooks": "@sycom-learn/ui/hooks",
+    "ui": "@sycom-learn/ui/components",
     "lib": "@sycom-learn/ui/lib",
-    "ui": "@sycom-learn/ui/components"
+    "hooks": "@sycom-learn/ui/hooks"
   },
-  "menuColor": "default",
-  "menuAccent": "subtle",
-  "registries": {}
+  "registries": {
+    "@coss": "https://coss.com/ui/r/{name}.json",
+    "@animate-ui": "https://animate-ui.com/r/{name}.json",
+    "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
+    "@elements": "https://www.tryelements.dev/r/{name}.json"
+  }
 }

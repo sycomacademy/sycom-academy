@@ -4,7 +4,7 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import { toast } from "sonner";
+import { toastManager } from "@sycom-learn/ui/components/toast";
 
 import Loader from "./components/loader";
 import { routeTree } from "./routeTree.gen";
@@ -14,11 +14,14 @@ function createQueryClient() {
   return new QueryClient({
     queryCache: new QueryCache({
       onError: (error, query) => {
-        toast.error(error.message, {
-          action: {
-            label: "retry",
+        toastManager.add({
+          id: `query-error:${query.queryHash}`,
+          title: error.message,
+          type: "error",
+          actionProps: {
+            children: "Retry",
             onClick: () => {
-              query.invalidate();
+              void query.invalidate();
             },
           },
         });

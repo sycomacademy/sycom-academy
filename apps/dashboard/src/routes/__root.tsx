@@ -1,5 +1,5 @@
 import type { AppRouter } from "@sycom-learn/api/routers/index";
-import { Toaster } from "@sycom-learn/ui/components/sonner";
+import { AnchoredToastProvider, ToastProvider } from "@sycom-learn/ui/components/toast";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
@@ -46,13 +46,16 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
-        <Toaster richColors />
-        <TanStackRouterDevtools position="bottom-left" />
-        <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+        <ToastProvider>
+          <AnchoredToastProvider>
+            <div className="grid h-svh grid-rows-[auto_1fr]">
+              <Header />
+              <Outlet />
+            </div>
+            <TanStackRouterDevtools position="bottom-left" />
+            <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+          </AnchoredToastProvider>
+        </ToastProvider>
         <Scripts />
       </body>
     </html>
