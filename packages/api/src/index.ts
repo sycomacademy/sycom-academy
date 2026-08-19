@@ -1,14 +1,17 @@
-import { initTRPC, TRPCError } from "@trpc/server";
+import { env } from "@sycom-learn/env/server";
+import { TRPCError } from "@trpc/server";
 
-import type { Context } from "./context";
+import { loggingMiddleware } from "./middleware/logging";
+import { t } from "./t";
 
-export const t = initTRPC.context<Context>().create();
-
+export { t };
 export const router = t.router;
 
-export const publicProcedure = t.procedure;
+const baseProcedure = env.DEBUG_PERFORMANCE ? t.procedure.use(loggingMiddleware) : t.procedure;
 
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const publicProcedure = baseProcedure;
+
+export const protectedProcedure = baseProcedure.use(({ ctx, next }) => {
   if (!ctx.session) {
     throw new TRPCError({
       code: "UNAUTHORIZED",

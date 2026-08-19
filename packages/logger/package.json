@@ -1,5 +1,5 @@
 {
-  "name": "@sycom-learn/auth",
+  "name": "@sycom-learn/logger",
   "type": "module",
   "exports": {
     ".": {
@@ -11,12 +11,8 @@
   },
   "scripts": {},
   "dependencies": {
-    "@sycom-learn/db": "workspace:*",
-    "@sycom-learn/env": "workspace:*",
-    "@sycom-learn/logger": "workspace:*",
-    "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
+    "pino": "^9.14.0",
+    "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
     "@sycom-learn/config": "workspace:*",
