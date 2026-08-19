@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: sycom-learn
+
+# infra/main.bicep is resource-group scoped, so AZURE_RESOURCE_GROUP must be set
+# in the azd environment. See .azure/deployment-plan.md section 6b.
+infra:
+  provider: bicep
+  path: infra
+
+services:
+  dashboard:
+    project: .
+    host: containerapp
+    # The Dockerfile owns the whole build (bun install + vite build), so azd runs
+    # no language-specific build step of its own.
+    language: docker
+    docker:
+      path: apps/dashboard/Dockerfile
+      context: .
+      # Built by ACR Tasks rather than locally: the dev machine is arm64 and
+      # Container Apps runs amd64.
+      remoteBuild: true
+
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      run: ./scripts/postprovision.sh
+      interactive: true
+      continueOnError: false
