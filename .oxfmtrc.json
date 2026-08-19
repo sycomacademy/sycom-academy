@@ -1,3 +1,9 @@
 {
-  "ignorePatterns": []
+  "indentStyle": "space",
+  "indentWidth": 2,
+  "sortTailwindcss": {
+    "stylesheet": "./packages/ui/src/styles/globals.css",
+    "functions": ["clsx", "cn", "cva"]
+  },
+  "ignorePatterns": ["node_modules", ".next", "dist", "build", ".cursor", ".claude", ".agents"]
 }
