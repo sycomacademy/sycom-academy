@@ -1,0 +1,3 @@
+{
+  "extends": "@sycom-learn/config/tsconfig.base.json"
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@sycom-learn/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@sycom-learn/db": "workspace:*",
+    "@sycom-learn/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sycom-learn/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

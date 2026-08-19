@@ -1,0 +1,26 @@
+{
+  "name": "@sycom-learn/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@sycom-learn/auth": "workspace:*",
+    "@sycom-learn/db": "workspace:*",
+    "@sycom-learn/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sycom-learn/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
