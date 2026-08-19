@@ -1,15 +1,15 @@
 name: sycom-learn
 
 services:
-  web:
+  dashboard:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile
+      dockerfile: apps/dashboard/Dockerfile
     init: true
     ports:
       - "3001:3001"
     env_file:
-      - path: apps/web/.env
+      - path: apps/dashboard/.env
         required: false
     environment:
       BETTER_AUTH_URL: http://localhost:3001

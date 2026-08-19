@@ -8,7 +8,7 @@ COPY . .
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install
 
 ENV NODE_ENV=production
-RUN cd apps/web && bun run build
+RUN cd apps/dashboard && bun run build
 ENV SKIP_ENV_VALIDATION=
 ENV BETTER_AUTH_SECRET=
 
@@ -22,5 +22,5 @@ ENV PORT=3001
 EXPOSE 3001
 
 # SSR chunks require workspace dependencies at runtime
-WORKDIR /app/apps/web
+WORKDIR /app/apps/dashboard
 CMD ["node", ".output/server/index.mjs"]

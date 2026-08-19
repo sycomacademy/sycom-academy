@@ -29,7 +29,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
-    "dev:web": "turbo run dev -F web --",
+    "dev:dashboard": "turbo run dev -F dashboard --",
     "db:push": "turbo run db:push -F @sycom-learn/db --",
     "db:studio": "turbo run db:studio -F @sycom-learn/db --",
     "db:generate": "turbo run db:generate -F @sycom-learn/db --",
