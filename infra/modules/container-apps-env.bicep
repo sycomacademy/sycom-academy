@@ -4,6 +4,9 @@ param name string
 @description('Existing Log Analytics workspace that receives console and system logs.')
 param logAnalyticsName string
 
+@description('Delegated subnet for the environment infrastructure. VNet integration cannot be added to an existing environment, so this is fixed at creation.')
+param infrastructureSubnetId string
+
 param location string
 param tags object
 
@@ -24,6 +27,12 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01'
         customerId: logAnalytics.properties.customerId
         sharedKey: logAnalytics.listKeys().primarySharedKey
       }
+    }
+    vnetConfiguration: {
+      infrastructureSubnetId: infrastructureSubnetId
+      // Ingress stays public so users reach the app directly; only egress and
+      // the path to Postgres move inside the VNet.
+      internal: false
     }
     workloadProfiles: [
       {

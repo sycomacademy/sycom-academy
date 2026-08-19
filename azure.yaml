@@ -22,9 +22,11 @@ services:
       remoteBuild: true
 
 hooks:
-  postprovision:
+  # Migrations run inside the VNet via a Container Apps job, because Postgres has
+  # no public endpoint. See scripts/postdeploy.sh.
+  postdeploy:
     posix:
       shell: sh
-      run: ./scripts/postprovision.sh
+      run: ./scripts/postdeploy.sh
       interactive: true
       continueOnError: false

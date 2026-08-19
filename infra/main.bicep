@@ -44,6 +44,15 @@ var tags = {
   managedBy: 'azd-bicep'
 }
 
+module network './modules/network.bicep' = {
+  name: 'network'
+  params: {
+    vnetName: '${resourcePrefix}-vnet'
+    location: location
+    tags: tags
+  }
+}
+
 module monitoring './modules/monitoring.bicep' = {
   name: 'monitoring'
   params: {
@@ -75,7 +84,20 @@ module postgres './modules/postgres.bicep' = {
   }
 }
 
-// Assembled here so the password never leaves a secure parameter path.
+module postgresPrivateEndpoint './modules/postgres-private-endpoint.bicep' = {
+  name: 'postgresPrivateEndpoint'
+  params: {
+    name: '${resourcePrefix}-postgres-pe'
+    postgresServerId: postgres.outputs.id
+    subnetId: network.outputs.privateEndpointSubnetId
+    privateDnsZoneId: network.outputs.postgresPrivateDnsZoneId
+    location: location
+    tags: tags
+  }
+}
+
+// The hostname is unchanged from the public one; inside the VNet the privatelink
+// zone resolves it to the private endpoint instead.
 var databaseUrl = 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgres.outputs.fullyQualifiedDomainName}:5432/${databaseName}?sslmode=require'
 
 module keyVault './modules/key-vault.bicep' = {
@@ -95,6 +117,7 @@ module containerAppsEnvironment './modules/container-apps-env.bicep' = {
   params: {
     name: '${resourcePrefix}-cae'
     logAnalyticsName: monitoring.outputs.logAnalyticsName
+    infrastructureSubnetId: network.outputs.containerAppsSubnetId
     location: location
     tags: tags
   }
@@ -118,13 +141,33 @@ module dashboard './modules/container-app.bicep' = {
   }
 }
 
+module migrationJob './modules/migration-job.bicep' = {
+  name: 'migrationJob'
+  params: {
+    name: '${resourcePrefix}-migrate'
+    containerAppsEnvironmentId: containerAppsEnvironment.outputs.id
+    registryLoginServer: containerRegistry.outputs.loginServer
+    databaseUrl: databaseUrl
+    location: location
+    tags: tags
+  }
+}
+
 // Phase 2: role assignments live in their own modules so nothing in phase 1
 // depends on them, which is what keeps the AcrPull grant from becoming circular.
-module acrPullRole './modules/acr-pull-role.bicep' = {
-  name: 'acrPullRole'
+module acrPullRoleApp './modules/acr-pull-role.bicep' = {
+  name: 'acrPullRoleApp'
   params: {
     registryName: containerRegistry.outputs.name
     principalId: dashboard.outputs.principalId
+  }
+}
+
+module acrPullRoleJob './modules/acr-pull-role.bicep' = {
+  name: 'acrPullRoleJob'
+  params: {
+    registryName: containerRegistry.outputs.name
+    principalId: migrationJob.outputs.principalId
   }
 }
 
@@ -152,6 +195,9 @@ output POSTGRES_HOST string = postgres.outputs.fullyQualifiedDomainName
 output POSTGRES_SERVER_NAME string = postgres.outputs.name
 output POSTGRES_DATABASE string = databaseName
 output POSTGRES_ADMIN_LOGIN string = postgresAdminLogin
+
+output AZURE_VNET_NAME string = network.outputs.vnetName
+output MIGRATION_JOB_NAME string = migrationJob.outputs.name
 
 output SERVICE_DASHBOARD_NAME string = dashboard.outputs.name
 output SERVICE_DASHBOARD_URI string = dashboard.outputs.uri

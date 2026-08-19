@@ -21,6 +21,11 @@ Dockerfile
 **/Dockerfile
 docker-compose.yml
 
+# Deployment tooling is not needed in the image, and the context is uploaded to
+# ACR for remote builds
+infra
+.azure
+
 # Secrets stay out of image layers; runtime env comes from compose env_file,
 # build-time public values come from compose build args
 **/.env

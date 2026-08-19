@@ -93,7 +93,11 @@ Required by `packages/env/src/server.ts` (validated at boot unless `SKIP_ENV_VAL
 | Log Analytics | `sycomacademy-logs` | Container Apps console + system logs, 30-day retention |
 | Application Insights | `sycomacademy-appi` | Request/dependency telemetry (workspace-based) |
 | Key Vault | `sycomacademykv01` | Durable store for `database-url`, `better-auth-secret`, `postgres-admin-password` |
-| Managed Identity | system-assigned on `sycomacademy-app` | Credential-free access to ACR and Key Vault |
+| Managed Identity | system-assigned on `sycomacademy-app` and `sycomacademy-migrate` | Credential-free access to ACR and Key Vault |
+| Virtual Network | `sycomacademy-vnet` (`10.20.0.0/16`) | `snet-container-apps` `/23` delegated to `Microsoft.App/environments`, `snet-private-endpoints` `/28` |
+| Private Endpoint | `sycomacademy-postgres-pe` | Private IP for Postgres inside the VNet |
+| Private DNS Zone | `privatelink.postgres.database.azure.com` | Resolves the Postgres hostname to the private endpoint, so the connection string is unchanged |
+| Container Apps Job | `sycomacademy-migrate` | Runs Drizzle migrations from inside the VNet |
 
 All names verified globally available (ACR + Key Vault via `checkNameAvailability`, Postgres and the Container Apps FQDN via DNS).
 
@@ -105,7 +109,7 @@ All names verified globally available (ACR + Key Vault via `checkNameAvailabilit
 | Azure Cache for Redis | Nothing currently needs it. Better Auth sessions live in Postgres and B1ms handles this load comfortably. Adding Redis now means a second stateful dependency and ~$16/month for no measured win. Revisit on session-lookup pressure or when rate limiting needs shared state across replicas. |
 | Load balancer (Azure Load Balancer / Application Gateway) | Container Apps ingress already terminates TLS, load-balances across replicas and gives a managed HTTPS endpoint. An L4 load balancer in front of it adds nothing; Application Gateway duplicates what ingress does and costs ~$180/month minimum. |
 | API gateway (API Management) | There is one internal consumer (the app's own browser client calling its own tRPC endpoints) and no third-party API, no partner keys, no per-consumer quotas, no versioning story. APIM Developer tier is ~$50/month and Basic ~$150/month to solve a problem that does not exist yet. Revisit when exposing an API to consumers outside this app. |
-| VNet integration + Postgres private access | Would remove the Postgres public endpoint entirely, but it also removes the ability to run Drizzle migrations from a laptop without a jumpbox or VPN. Deferred; §5a covers the interim network control. |
+_(VNet integration was originally deferred here. It is now included — see §5b for why that changed.)_
 
 ### 5a. Security controls actually in place for v1
 
@@ -117,9 +121,27 @@ All names verified globally available (ACR + Key Vault via `checkNameAvailabilit
 | Registry auth | System-assigned managed identity with `AcrPull`; ACR admin user **disabled** |
 | Key Vault auth | System-assigned managed identity with `Key Vault Secrets User` |
 | Database transport | `require_secure_transport` on; connection string pins `sslmode=require` |
-| Database network | Public endpoint with **no** `0.0.0.0` "allow all Azure services" rule. Firewall allows only the container app's actual outbound IPs, resolved at provision time from `properties.outboundIpAddresses` (confirmed on the existing app to be a distinct IP from the environment's static inbound IP, so it must be read at runtime rather than assumed) |
-| Migration access | The deploying machine's public IP is added as a named firewall rule for the migration step and **removed immediately afterwards** |
+| Database network | `publicNetworkAccess: Disabled`. **No public endpoint and no firewall allowlist at all.** Reachable only through a private endpoint in `snet-private-endpoints`, so nothing on the internet can open a connection regardless of credentials |
+| Migration access | A Container Apps job inside the VNet. No developer machine ever needs database access, and no temporary firewall rule is ever opened |
 | Image provenance | Images built and pushed by `azd` to a private Basic ACR; anonymous pull disabled |
+
+### 5b. Why VNet integration moved from "deferred" to required
+
+The first provisioning run got as far as the post-provision hook and then exposed a wrong assumption in the original design. The plan was to allowlist the container app's outbound IPs on the Postgres firewall, on the belief that a Consumption environment egresses from one or a small handful of addresses. Reading `properties.outboundIpAddresses` on the deployed app returned **161 addresses**.
+
+That breaks the approach three separate ways:
+
+1. **It does not fit.** Flexible Server's firewall rule limit is far below 161.
+2. **It is unusably slow.** Each rule is a server-level update taking roughly a minute; 15 rules had been created after about 12 minutes.
+3. **It is not the control it appears to be.** Those addresses are a pool shared across Consumption tenancy in the region, so allowlisting them grants reachability to other tenants' container apps, and the list can drift without warning — the app would lose database access at an arbitrary future date.
+
+The run was aborted, the 15 orphaned rules deleted, and the design changed to private connectivity. This is both **more secure** (no public database endpoint at all) and **cheaper** than the NAT Gateway alternative that would have been needed to make an allowlist viable (~$7/month for the private endpoint against ~$35/month for a NAT Gateway plus static IP).
+
+Timing mattered here: **VNet integration cannot be added to an existing Container Apps environment.** `sycomacademy-cae` and `sycomacademy-app` were deleted and recreated, which cost nothing because neither held state. The same change after cutover would have meant rebuilding the environment serving live traffic.
+
+The Postgres server did **not** need recreating: it was created in public-access mode, which is the mode that accepts a private endpoint, so `publicNetworkAccess` was simply flipped to `Disabled`.
+
+The one real cost of this design is that `bun run db:migrate` from a laptop no longer works, since the database is unreachable from outside the VNet. `scripts/postdeploy.sh` and the `sycomacademy-migrate` job replace it, running migrations automatically on every deploy against the exact image just deployed.
 
 ---
 
@@ -138,6 +160,10 @@ Current usage measured in `uksouth` via `az resource list`. The quota CLI (`az q
 | Microsoft.KeyVault/vaults | 1 | 3 | 25,000 per subscription per region | Fetched from: Official docs |
 | Microsoft.OperationalInsights/workspaces | 1 | 3 | No hard per-subscription limit | Fetched from: Official docs (Azure Monitor limits) |
 | Microsoft.Insights/components | 1 | 1 | No hard per-subscription limit (workspace-based) | Fetched from: Official docs |
+| Microsoft.Network/virtualNetworks | 1 | 1 | 1,000 per region per subscription | Fetched from: Official docs |
+| Microsoft.Network/privateEndpoints | 1 | 1 | 1,000 per subscription | Fetched from: Official docs |
+| Microsoft.Network/privateDnsZones | 1 | 1 | 1,000 per subscription | Fetched from: Official docs |
+| Microsoft.App/jobs | 1 | 1 | 100 per environment | Fetched from: Official docs |
 
 **Status:** ✅ All resources within limits
 
@@ -242,11 +268,16 @@ Verify with `az role assignment list --assignee edee4978-903c-44c1-8ff4-590a926e
 | `infra/modules/container-registry.bicep` | ACR | ✅ |
 | `infra/modules/key-vault.bicep` | Key Vault + secrets | ✅ |
 | `infra/modules/postgres.bicep` | Flexible Server + database | ✅ |
-| `infra/modules/container-apps-env.bicep` | Container Apps Environment | ✅ |
+| `infra/modules/container-apps-env.bicep` | Container Apps Environment, VNet-integrated | ✅ |
 | `infra/modules/container-app.bicep` | The dashboard container app | ✅ |
-| `infra/modules/acr-pull-role.bicep` | AcrPull grant (phase 2, breaks the dependency cycle) | ✅ |
+| `infra/modules/network.bicep` | VNet, subnets, private DNS zone + link | ✅ |
+| `infra/modules/postgres-private-endpoint.bicep` | Private endpoint + DNS zone group for Postgres | ✅ |
+| `infra/modules/migration-job.bicep` | Container Apps job that applies Drizzle migrations | ✅ |
+| `infra/modules/acr-pull-role.bicep` | AcrPull grant (phase 2, breaks the dependency cycle); instantiated for the app and the job | ✅ |
 | `infra/modules/key-vault-role.bicep` | Key Vault Secrets User / Officer grants | ✅ |
-| `scripts/postprovision.sh` | Postgres firewall rules + Drizzle migrations | ✅ |
+| `scripts/postdeploy.sh` | Points the migration job at the deployed image, runs it, polls for success | ✅ |
+| `scripts/migrate.mjs` | Migration entry point; uses drizzle-orm's migrator so it depends only on runtime deps | ✅ |
+| `.dockerignore` | Excludes `infra` and `.azure` from the build context | ✅ |
 | `apps/dashboard/Dockerfile` | Already correct (port 3001, HOST 0.0.0.0) — unchanged | ✅ |
 
 ### azd environment state (local, not committed)

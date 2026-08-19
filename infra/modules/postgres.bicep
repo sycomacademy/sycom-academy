@@ -36,6 +36,12 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     highAvailability: {
       mode: 'Disabled'
     }
+    network: {
+      // Reachable only through the private endpoint in
+      // modules/postgres-private-endpoint.bicep. No firewall allowlist exists,
+      // and no address on the internet can open a connection.
+      publicNetworkAccess: 'Disabled'
+    }
     authConfig: {
       // Password auth is required because Drizzle connects over node-postgres
       // with a connection string. Entra auth stays on so operators can connect
@@ -56,10 +62,10 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-0
   }
 }
 
-// Deliberately no firewall rules here, which leaves the server default-deny.
-// scripts/postprovision.sh adds a rule for the container app's real outbound IPs
-// (read from the deployed app, since they differ from the environment's static
-// inbound IP) and adds/removes the operator IP around the migration step.
+// No firewall rules by design: public access is disabled entirely, so there is
+// no allowlist to maintain and no drift when Azure changes the Container Apps
+// egress pool. Migrations run from inside the VNet via the Container Apps job in
+// modules/migration-job.bicep.
 
 output name string = server.name
 output id string = server.id
