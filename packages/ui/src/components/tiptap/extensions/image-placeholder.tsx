@@ -2,7 +2,10 @@ import { Button } from "@sycom-learn/ui/components/button";
 import { FileUploader } from "@sycom-learn/ui/components/file-uploader";
 import { Input } from "@sycom-learn/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@sycom-learn/ui/components/tabs";
-import { NODE_HANDLES_SELECTED_STYLE_CLASSNAME, isValidUrl } from "@sycom-learn/ui/lib/tiptap-utils";
+import {
+  NODE_HANDLES_SELECTED_STYLE_CLASSNAME,
+  isValidUrl,
+} from "@sycom-learn/ui/lib/tiptap-utils";
 import type { TiptapEditorUploadFn } from "@sycom-learn/ui/lib/tiptap-upload";
 import type { FileWithPreview } from "@sycom-learn/ui/hooks/use-file-upload";
 import { useEditorEditable } from "@sycom-learn/ui/components/tiptap/use-editor-editable";

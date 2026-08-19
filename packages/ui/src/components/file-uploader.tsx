@@ -4,7 +4,11 @@ import type { HTMLAttributes } from "react";
 import { Button } from "@sycom-learn/ui/components/button";
 import { Progress } from "@sycom-learn/ui/components/progress";
 import { ScrollArea } from "@sycom-learn/ui/components/scroll-area";
-import { type FileWithPreview, formatBytes, useFileUpload } from "@sycom-learn/ui/hooks/use-file-upload";
+import {
+  type FileWithPreview,
+  formatBytes,
+  useFileUpload,
+} from "@sycom-learn/ui/hooks/use-file-upload";
 import { cn } from "@sycom-learn/ui/lib/utils";
 
 export interface FileUploaderProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange"> {

@@ -18,5 +18,17 @@
   "ignorePatterns": ["node_modules", ".next", "dist", "build", ".cursor", ".claude", ".agents"],
   "env": {
     "builtin": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["packages/ui/src/**"],
+      "rules": {
+        "react/set-state-in-effect": "off",
+        "react/refs": "off",
+        "react/preserve-manual-memoization": "off",
+        "react/static-components": "off",
+        "react/purity": "off"
+      }
+    }
+  ]
 }

@@ -1,3 +1,6 @@
 {
-  "extends": "@sycom-learn/config/tsconfig.base.json"
+  "extends": "@sycom-learn/config/tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  }
 }
