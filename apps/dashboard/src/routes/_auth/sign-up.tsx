@@ -35,7 +35,11 @@ export const Route = createFileRoute("/_auth/sign-up")({
   head: () => ({
     meta: [
       { title: "Create account | Sycom" },
-      { name: "description", content: "Create your Sycom account to get started." },
+      {
+        name: "description",
+        content:
+          "Create a free Sycom account and start your team's cybersecurity training in minutes.",
+      },
     ],
   }),
   component: SignUpPage,

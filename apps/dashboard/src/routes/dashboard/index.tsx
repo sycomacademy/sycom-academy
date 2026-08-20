@@ -4,7 +4,7 @@ import { useUser } from "@/hooks/use-user";
 
 export const Route = createFileRoute("/dashboard/")({
   head: () => ({
-    meta: [{ title: "Dashboard | Sycom" }],
+    meta: [{ title: "Overview | Sycom" }],
   }),
   component: DashboardIndexPage,
 });

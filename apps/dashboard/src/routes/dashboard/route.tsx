@@ -5,6 +5,9 @@ import Loader from "@/components/loader";
 import { sessionQueryOptions } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/dashboard")({
+  head: () => ({
+    meta: [{ title: "Dashboard | Sycom" }, { name: "robots", content: "noindex, nofollow" }],
+  }),
   beforeLoad: async ({ context, location }) => {
     const session = await context.queryClient.fetchQuery(sessionQueryOptions());
     if (!session) {

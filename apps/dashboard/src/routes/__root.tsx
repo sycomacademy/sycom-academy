@@ -26,13 +26,28 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Sycom",
+        name: "theme-color",
+        content: "#0b1120",
+      },
+      { title: "Sycom" },
+      {
+        name: "description",
+        content: "Cybersecurity training for teams. Multi-tenant, structured, measurable.",
       },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+        sizes: "any",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/apple-icon.png",
       },
     ],
   }),
