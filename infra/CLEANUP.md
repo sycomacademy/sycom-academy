@@ -37,12 +37,12 @@ Production Postgres is `sycomacademy-postgres`. This Neon project was
 created the day of the rebuild, last compute the same evening, and is not
 referenced by the repo.
 
-| What | Value |
-|---|---|
-| Name | `Sycom academy` |
-| Id | `square-glitter-89843133` |
-| Region | `aws-eu-west-2` |
-| Created | 2026-08-19 |
+| What    | Value                     |
+| ------- | ------------------------- |
+| Name    | `Sycom academy`           |
+| Id      | `square-glitter-89843133` |
+| Region  | `aws-eu-west-2`           |
+| Created | 2026-08-19                |
 
 Delete it in the Neon console, or:
 
@@ -65,12 +65,12 @@ Until then this is production, not leftover.
 
 ### Still serving users
 
-| Resource | Type | Why it stays |
-|---|---|---|
-| `sycomlearn-prod-app` | Container app | Bound to `learn.sycom.academy` |
-| `sycomlearn-prod-cae` | Container Apps environment | Hosts the old app and the managed cert |
-| `learn.sycom.academy-sycomlea-260519133833` | Managed certificate | TLS for the custom domain |
-| `sycomlearn-prod-postgres` | PostgreSQL Flexible Server | Live data |
+| Resource                                    | Type                       | Why it stays                           |
+| ------------------------------------------- | -------------------------- | -------------------------------------- |
+| `sycomlearn-prod-app`                       | Container app              | Bound to `learn.sycom.academy`         |
+| `sycomlearn-prod-cae`                       | Container Apps environment | Hosts the old app and the managed cert |
+| `learn.sycom.academy-sycomlea-260519133833` | Managed certificate        | TLS for the custom domain              |
+| `sycomlearn-prod-postgres`                  | PostgreSQL Flexible Server | Live data                              |
 
 Confirm before cutting over:
 
@@ -89,14 +89,14 @@ and has no custom domain.
 
 ### Supporting the old app — delete with it
 
-| Resource | Type |
-|---|---|
-| `sycomlearnprodacr01` | Container registry |
-| `sycomlearnprodkv01` | Key Vault |
-| `sycomlearn-prod-logs` | Log Analytics |
+| Resource                                                       | Type                              |
+| -------------------------------------------------------------- | --------------------------------- |
+| `sycomlearnprodacr01`                                          | Container registry                |
+| `sycomlearnprodkv01`                                           | Key Vault                         |
+| `sycomlearn-prod-logs`                                         | Log Analytics                     |
 | `sycomlearn-prod-caesycomlearnprodacr01sycomlearn-prod-rgOidc` | User-assigned identity (ACR pull) |
-| `sycomlearn-prod-email` + `AzureManagedDomain` | Communication email |
-| `SycomLearn` | Application Gateway WAF policy |
+| `sycomlearn-prod-email` + `AzureManagedDomain`                 | Communication email               |
+| `SycomLearn`                                                   | Application Gateway WAF policy    |
 
 After the domain has moved, delete the old app first, then the environment,
 then the rest. Azure will refuse to delete the environment while the app
@@ -107,10 +107,10 @@ option — the new `sycomacademy-*` resources live in the same group.
 
 ### Probably not this repo — confirm before deleting
 
-| What | Notes |
-|---|---|
+| What                                         | Notes                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
 | Neon project `Sycom` (`bold-truth-25407487`) | Older, still computing today. Likely the previous LMS, not this rebuild. |
-| Trigger.dev `sycom-lms` | Not referenced in this repository. |
+| Trigger.dev `sycom-lms`                      | Not referenced in this repository.                                       |
 
 ---
 

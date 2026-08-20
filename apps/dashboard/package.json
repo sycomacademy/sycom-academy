@@ -9,13 +9,13 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "catalog:",
     "@sycom-learn/api": "workspace:*",
     "@sycom-learn/auth": "workspace:*",
     "@sycom-learn/env": "workspace:*",
     "@sycom-learn/logger": "workspace:*",
     "@sycom-learn/ui": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/react-form": "^1.33.2",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.18",
     "@tanstack/react-router-ssr-query": "^1.167.1",
@@ -26,10 +26,12 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "lucide-react": "catalog:",
+    "motion": "^12.38.0",
     "next-themes": "catalog:",
     "nitro": "^3.0.260610-beta",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-hook-form": "catalog:",
     "tailwindcss": "catalog:",
     "zod": "catalog:"
   },

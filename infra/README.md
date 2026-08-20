@@ -26,22 +26,22 @@ the data migration.
 
 ## What is provisioned
 
-| Resource | Name | Notes |
-|---|---|---|
-| Virtual network | `sycomacademy-vnet` | `10.20.0.0/16` |
-| ↳ Container Apps subnet | `snet-container-apps` | `10.20.0.0/23`, delegated to `Microsoft.App/environments` |
-| ↳ Private endpoint subnet | `snet-private-endpoints` | `10.20.2.0/28`, endpoint network policies disabled |
-| ↳ Management subnet | `snet-management` | `10.20.2.16/28`, explicit outbound access for the Tailscale router |
-| Container Apps environment | `sycomacademy-cae` | Workload profiles, VNet-integrated, external ingress |
-| Container app | `sycomacademy-app` | System-assigned identity, `AcrPull` on the registry |
-| Migration job | `sycomacademy-migrate` | Manual-trigger job; the only thing that talks to the database during a deploy |
-| Container registry | `sycomacademyacr01` | Basic, admin user **disabled** |
-| PostgreSQL Flexible Server | `sycomacademy-postgres` | PG 18, `Standard_B1ms`, **no public endpoint** |
-| Private endpoint | `sycomacademy-postgres-pe` | `10.20.2.4`, registered in `privatelink.postgres.database.azure.com` |
-| Key Vault | `sycomacademykv01` | RBAC, soft-delete 90 days, purge protection |
-| CI identity | `sycomacademy-github-mi` | User-assigned, federated to GitHub Actions |
-| Access VM | `sycomacademy-access` | Tailscale subnet router, no public IP. Deallocate with `bun run vm:down`. |
-| Log Analytics / App Insights | `sycomacademy-logs` / `sycomacademy-appi` | |
+| Resource                     | Name                                      | Notes                                                                         |
+| ---------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
+| Virtual network              | `sycomacademy-vnet`                       | `10.20.0.0/16`                                                                |
+| ↳ Container Apps subnet      | `snet-container-apps`                     | `10.20.0.0/23`, delegated to `Microsoft.App/environments`                     |
+| ↳ Private endpoint subnet    | `snet-private-endpoints`                  | `10.20.2.0/28`, endpoint network policies disabled                            |
+| ↳ Management subnet          | `snet-management`                         | `10.20.2.16/28`, explicit outbound access for the Tailscale router            |
+| Container Apps environment   | `sycomacademy-cae`                        | Workload profiles, VNet-integrated, external ingress                          |
+| Container app                | `sycomacademy-app`                        | System-assigned identity, `AcrPull` on the registry                           |
+| Migration job                | `sycomacademy-migrate`                    | Manual-trigger job; the only thing that talks to the database during a deploy |
+| Container registry           | `sycomacademyacr01`                       | Basic, admin user **disabled**                                                |
+| PostgreSQL Flexible Server   | `sycomacademy-postgres`                   | PG 18, `Standard_B1ms`, **no public endpoint**                                |
+| Private endpoint             | `sycomacademy-postgres-pe`                | `10.20.2.4`, registered in `privatelink.postgres.database.azure.com`          |
+| Key Vault                    | `sycomacademykv01`                        | RBAC, soft-delete 90 days, purge protection                                   |
+| CI identity                  | `sycomacademy-github-mi`                  | User-assigned, federated to GitHub Actions                                    |
+| Access VM                    | `sycomacademy-access`                     | Tailscale subnet router, no public IP. Deallocate with `bun run vm:down`.     |
+| Log Analytics / App Insights | `sycomacademy-logs` / `sycomacademy-appi` |                                                                               |
 
 ### Why the database has no public endpoint
 
@@ -80,22 +80,22 @@ origins, is about $330/month against roughly $35 for Standard.
 
 ### Other things deliberately left out
 
-| Service | Why not |
-|---|---|
-| Azure Cache for Redis | Nothing needs it. Better Auth sessions live in Postgres and B1ms handles this load. Revisit on session-lookup pressure, or when rate limiting needs state shared across replicas. ~$16/month. |
-| Load balancer / Application Gateway | Container Apps ingress already terminates TLS and balances across replicas. Application Gateway duplicates that from ~$180/month. |
-| API Management | One consumer — this app's own browser client calling its own tRPC endpoints. No third party, no partner keys, no quotas, no versioning. From ~$50/month to solve a problem that does not exist. |
+| Service                             | Why not                                                                                                                                                                                         |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Azure Cache for Redis               | Nothing needs it. Better Auth sessions live in Postgres and B1ms handles this load. Revisit on session-lookup pressure, or when rate limiting needs state shared across replicas. ~$16/month.   |
+| Load balancer / Application Gateway | Container Apps ingress already terminates TLS and balances across replicas. Application Gateway duplicates that from ~$180/month.                                                               |
+| API Management                      | One consumer — this app's own browser client calling its own tRPC endpoints. No third party, no partner keys, no quotas, no versioning. From ~$50/month to solve a problem that does not exist. |
 
 ---
 
 ## Decisions that are hard or impossible to reverse
 
-| Decision | What reversing costs |
-|---|---|
-| Container Apps environment VNet integration | Cannot be added or removed in place. Delete and recreate the environment and every app in it. |
+| Decision                                                   | What reversing costs                                                                                                                                                                                                 |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Container Apps environment VNet integration                | Cannot be added or removed in place. Delete and recreate the environment and every app in it.                                                                                                                        |
 | Postgres networking mode (public-access vs VNet injection) | Fixed at server creation. This server is in public-access mode with public access disabled, which is what allows a private endpoint. Switching to VNet injection means rebuilding the server and migrating the data. |
-| Container Apps environment internal vs external | Fixed at creation. |
-| Every resource name | Azure resources cannot be renamed. The custom domain moves; the names do not. |
+| Container Apps environment internal vs external            | Fixed at creation.                                                                                                                                                                                                   |
+| Every resource name                                        | Azure resources cannot be renamed. The custom domain moves; the names do not.                                                                                                                                        |
 
 Public access and private endpoints **can** coexist on this server — you can flip
 `publicNetworkAccess` and add firewall rules later without rebuilding. That is the
@@ -108,15 +108,15 @@ emergency fallback if Tailscale is unavailable, but it is not the normal path.
 There are two, and they own different things. Using the wrong one is how
 production gets rolled back.
 
-| | GitHub Actions | `azd` |
-|---|---|---|
-| Owns | The **image** the app runs | The **resources** the app runs on |
-| Runs | Automatically, on push to `main` | Manually, from your laptop |
-| Does | build → push to ACR → new revision → migrations → smoke check | applies `infra/**` Bicep to Azure |
-| Auth | OIDC as `sycomacademy-github-mi`, no secret | your `az login`, needs PIM activation |
-| Takes | about 4 minutes | about 3 minutes |
-| Touches the database | only through the migration job | no |
-| Touches networking, vault, Postgres config | no | yes |
+|                                            | GitHub Actions                                                | `azd`                                 |
+| ------------------------------------------ | ------------------------------------------------------------- | ------------------------------------- |
+| Owns                                       | The **image** the app runs                                    | The **resources** the app runs on     |
+| Runs                                       | Automatically, on push to `main`                              | Manually, from your laptop            |
+| Does                                       | build → push to ACR → new revision → migrations → smoke check | applies `infra/**` Bicep to Azure     |
+| Auth                                       | OIDC as `sycomacademy-github-mi`, no secret                   | your `az login`, needs PIM activation |
+| Takes                                      | about 4 minutes                                               | about 3 minutes                       |
+| Touches the database                       | only through the migration job                                | no                                    |
+| Touches networking, vault, Postgres config | no                                                            | yes                                   |
 
 **Use GitHub Actions** — that is, just push — for anything under `apps/`,
 `packages/`, or `scripts/`. Application code, schema migrations, dependency
@@ -127,7 +127,7 @@ resource, an SKU, a firewall or network setting, a role assignment, a Key Vault
 secret wired into the template. Preview it first, apply it, and let the next push
 handle the app.
 
-**Use `azd up`** only to deploy app *and* infrastructure together — a first
+**Use `azd up`** only to deploy app _and_ infrastructure together — a first
 provision, or a disaster-recovery rebuild. In day-to-day work you should not need
 it, and it duplicates what CI already does.
 
@@ -200,7 +200,7 @@ public URL.
 `azd up` still works from a laptop and does the same thing through
 `scripts/predeploy.sh` and `scripts/postdeploy.sh`.
 
-> **Migration ordering.** Migrations run *after* the new revision is live, matching
+> **Migration ordering.** Migrations run _after_ the new revision is live, matching
 > what `azd` does. That is correct for additive migrations. For a destructive one —
 > dropping or renaming a column the running code still reads — deploy the migration
 > on its own commit first, then the code that depends on it.
@@ -209,14 +209,14 @@ public URL.
 
 Measured on run 32318429891, before the layer cache was removed:
 
-| Step | Time |
-|---|---|
-| Build and push | 2m13s |
-| Run migrations | 1m17s |
-| Roll the container app onto the new image | 19s |
-| Install the containerapp extension | 11s |
-| Sign in to Azure + registry | 12s |
-| Everything else | ~20s |
+| Step                                      | Time  |
+| ----------------------------------------- | ----- |
+| Build and push                            | 2m13s |
+| Run migrations                            | 1m17s |
+| Roll the container app onto the new image | 19s   |
+| Install the containerapp extension        | 11s   |
+| Sign in to Azure + registry               | 12s   |
+| Everything else                           | ~20s  |
 
 Two things dominate, and neither is the actual build — `bun install` takes 6s and
 `vite build` takes 7s. The rest is moving bytes around.
@@ -250,11 +250,11 @@ az containerapp update -g sycomlearn-prod-rg -n sycomacademy-app --image sycomac
 Three GitHub repository **variables** (not secrets — none of these are sensitive,
 and there is no client secret anywhere in this setup):
 
-| Variable | Value |
-|---|---|
-| `AZURE_CLIENT_ID` | `GITHUB_IDENTITY_CLIENT_ID` from the deployment outputs |
-| `AZURE_TENANT_ID` | `f1f481c9-3958-4fcd-a611-189d6d325c24` |
-| `AZURE_SUBSCRIPTION_ID` | `de0b9977-4b54-468c-8346-c27f06a416ed` |
+| Variable                | Value                                                   |
+| ----------------------- | ------------------------------------------------------- |
+| `AZURE_CLIENT_ID`       | `GITHUB_IDENTITY_CLIENT_ID` from the deployment outputs |
+| `AZURE_TENANT_ID`       | `f1f481c9-3958-4fcd-a611-189d6d325c24`                  |
+| `AZURE_SUBSCRIPTION_ID` | `de0b9977-4b54-468c-8346-c27f06a416ed`                  |
 
 Read the client id after provisioning:
 
@@ -343,13 +343,13 @@ bun run vm:up
 
 DataGrip PostgreSQL data source — **until split DNS is set, use the private IP:**
 
-| Field | Value |
-|---|---|
-| Host | `10.20.2.4` |
-| Port | `5432` |
-| Database | `sycom` |
-| SSL | on, mode `require` (**not** `verify-full`) |
-| User | `sycomadmin` (or your UPN for Entra) |
+| Field    | Value                                      |
+| -------- | ------------------------------------------ |
+| Host     | `10.20.2.4`                                |
+| Port     | `5432`                                     |
+| Database | `sycom`                                    |
+| SSL      | on, mode `require` (**not** `verify-full`) |
+| User     | `sycomadmin` (or your UPN for Entra)       |
 
 `verify-full` fails against the IP: the cert is for `*.postgres.database.azure.com`.
 Do not use host `sycomacademy-postgres.postgres.database.azure.com` yet — public DNS
@@ -425,16 +425,16 @@ az monitor log-analytics query -w "$(az monitor log-analytics workspace show -g 
 
 Approximate, `uksouth`, pay-as-you-go, single environment.
 
-| Item | USD/month |
-|---|---|
-| Container app, 0.5 vCPU / 1 GiB, min 1 replica | ~30 |
-| PostgreSQL `Standard_B1ms` + 32 GB Premium SSD | ~18 |
-| Private endpoint | ~7 |
-| Access VM `Standard_B1s` + 30 GB disk | ~12 running, ~3 deallocated (`bun run vm:down`) |
-| Container registry, Basic | ~5 |
-| Log Analytics + Application Insights, low volume | ~5 |
-| Key Vault, virtual network, private DNS zone | ~1 |
-| **Total** | **~78** |
+| Item                                             | USD/month                                       |
+| ------------------------------------------------ | ----------------------------------------------- |
+| Container app, 0.5 vCPU / 1 GiB, min 1 replica   | ~30                                             |
+| PostgreSQL `Standard_B1ms` + 32 GB Premium SSD   | ~18                                             |
+| Private endpoint                                 | ~7                                              |
+| Access VM `Standard_B1s` + 30 GB disk            | ~12 running, ~3 deallocated (`bun run vm:down`) |
+| Container registry, Basic                        | ~5                                              |
+| Log Analytics + Application Insights, low volume | ~5                                              |
+| Key Vault, virtual network, private DNS zone     | ~1                                              |
+| **Total**                                        | **~78**                                         |
 
 Add about $4 if the access VM turns out to need a public IP for egress. Tailscale's
 free tier covers this usage (3 users, 100 devices).
@@ -448,13 +448,13 @@ it only once monitoring shows the burst credit balance running down.
 
 ## Known follow-ups
 
-| Item | Why |
-|---|---|
-| Access VM auto-shutdown | Needs `Microsoft.DevTestLab` registered at subscription scope. Until then `bun run vm:down` when idle. |
-| Tailscale split DNS | Routes are approved. Add nameserver `168.63.129.16` for `postgres.database.azure.com` so the FQDN works in DataGrip. Until then use host `10.20.2.4`. |
-| Managed-identity database auth for the app | Entra auth is enabled on the server but the app still uses a connection-string password. Removing it means wiring `pg`'s async password callback to `DefaultAzureCredential` with token caching, and registering the app's identity with `pgaadauth_create_principal`. Application work, not infrastructure. |
-| ACR retention policy | Basic has a 10 GB quota and every deploy adds a manifest. |
-| Front Door, WAF, custom domain | Needed at cutover. |
-| Staging environment | The template is parameterised for it; it is a params file and a non-overlapping address space away. |
-| Runner image size | 846 MB, of which 758 MB is `node_modules` that only the build needs — turbo, typescript, the rolldown and oxlint native bindings, plus UI libraries that are already inlined into `.output`. Needs a separate deps stage; `bun install --production` alone changes nothing. Would speed up both the image push and the migration job's cold start. |
-| Redundant CLI calls in `scripts/postdeploy.sh` | `job registry set` runs on every deploy and takes 21s to confirm what Bicep already declares. Worth making conditional. |
+| Item                                           | Why                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Access VM auto-shutdown                        | Needs `Microsoft.DevTestLab` registered at subscription scope. Until then `bun run vm:down` when idle.                                                                                                                                                                                                                                             |
+| Tailscale split DNS                            | Routes are approved. Add nameserver `168.63.129.16` for `postgres.database.azure.com` so the FQDN works in DataGrip. Until then use host `10.20.2.4`.                                                                                                                                                                                              |
+| Managed-identity database auth for the app     | Entra auth is enabled on the server but the app still uses a connection-string password. Removing it means wiring `pg`'s async password callback to `DefaultAzureCredential` with token caching, and registering the app's identity with `pgaadauth_create_principal`. Application work, not infrastructure.                                       |
+| ACR retention policy                           | Basic has a 10 GB quota and every deploy adds a manifest.                                                                                                                                                                                                                                                                                          |
+| Front Door, WAF, custom domain                 | Needed at cutover.                                                                                                                                                                                                                                                                                                                                 |
+| Staging environment                            | The template is parameterised for it; it is a params file and a non-overlapping address space away.                                                                                                                                                                                                                                                |
+| Runner image size                              | 846 MB, of which 758 MB is `node_modules` that only the build needs — turbo, typescript, the rolldown and oxlint native bindings, plus UI libraries that are already inlined into `.output`. Needs a separate deps stage; `bun install --production` alone changes nothing. Would speed up both the image push and the migration job's cold start. |
+| Redundant CLI calls in `scripts/postdeploy.sh` | `job registry set` runs on every deploy and takes 21s to confirm what Bicep already declares. Worth making conditional.                                                                                                                                                                                                                            |

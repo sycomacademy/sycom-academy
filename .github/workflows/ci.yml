@@ -1,0 +1,46 @@
+# Cheap gates: lint, format, types, and a bun build. No Azure.
+#
+# pull_request covers branches. push is main only so a PR is not charged
+# twice (and so concurrency does not cancel one of those two as a red check).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SKIP_ENV_VALIDATION: "1"
+  BETTER_AUTH_SECRET: build-time-placeholder-secret-not-used-at-runtime
+  TURBO_LOG_ORDER: grouped
+
+jobs:
+  check:
+    name: format, typecheck, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Lint and format
+        run: bun run check
+
+      - name: Typecheck
+        run: bun run check-types
+
+      - name: Build
+        run: bun run build

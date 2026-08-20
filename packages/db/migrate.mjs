@@ -29,7 +29,9 @@ const entries = await readdir(migrationsFolder).catch(() => {
 });
 
 console.log(`migrate: applying from ${migrationsFolder}`);
-console.log(`migrate: ${entries.filter((entry) => entry.endsWith(".sql")).length} migration file(s) present`);
+console.log(
+  `migrate: ${entries.filter((entry) => entry.endsWith(".sql")).length} migration file(s) present`,
+);
 
 const db = drizzle(process.env.DATABASE_URL);
 

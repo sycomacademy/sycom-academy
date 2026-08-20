@@ -1,0 +1,42 @@
+---
+description: Better Auth, session query, beforeLoad redirects, post-login navigation.
+globs: apps/dashboard/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Auth and session
+
+Better Auth owns the cookie. TanStack Query owns the `{ session, user } | null` view of it. TanStack Router owns whether the user is allowed on the URL.
+
+## Pieces (do not duplicate)
+
+| File | Role |
+| --- | --- |
+| `packages/auth` | Server `betterAuth(...)` |
+| `routes/api/auth/$.ts` | Forwards GET/POST to `auth.handler` |
+| `lib/auth/auth-client.ts` | `createAuthClient({})` — same-origin `/api/auth` |
+| `middleware/auth.ts` | `sessionMiddleware` → `auth.api.getSession({ headers })` |
+| `functions/get-session.ts` | Server fn returning `{ session, user } \| null` |
+| `lib/auth/session.ts` | `SESSION_QUERY_KEY` + `sessionQueryOptions` |
+| `lib/auth/auth-redirect.ts` | Open-redirect safe path + real-route check |
+| `hooks/use-user.ts` | `useSuspenseQuery` — only inside `/dashboard` |
+
+Do not call `authClient.useSession()` for route gates. Do not add a second session cache.
+
+## Redirects (`beforeLoad` only)
+
+| Route | Has session | No session |
+| --- | --- | --- |
+| `/` | → `/dashboard` | → `/sign-in` |
+| `/_auth` | → `safeRedirectPath(search.redirect) ?? "/dashboard"` | stay |
+| `/dashboard` | stay | → `/sign-in?redirect=<location.href>` |
+
+After `authClient.signIn.email` succeeds: `invalidateQueries({ queryKey: SESSION_QUERY_KEY })`, then `router.navigate({ href: resolvePostAuthRedirect(router, redirectParam), replace: true })`.
+
+After `signOut`: `removeQueries({ queryKey: SESSION_QUERY_KEY })`, navigate to `/sign-in` with `replace: true`, then `cancelQueries` + `clear()`.
+
+`?redirect=` must pass `safeRedirectPath` (starts with `/`, not `//`). Post-login also requires `router.getMatchedRoutes` to hit a real route; otherwise `/dashboard`.
+
+## Mutations
+
+Sign-in / sign-up / sign-out go through `authClient`, not tRPC. Domain APIs use `protectedProcedure` and read `ctx.session` — they do not re-implement login.

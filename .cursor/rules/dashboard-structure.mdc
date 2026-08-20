@@ -1,0 +1,46 @@
+---
+description: Dashboard folder layout and what each directory is allowed to own.
+globs: apps/dashboard/**/*
+alwaysApply: false
+---
+
+# Dashboard folder structure
+
+```
+apps/dashboard/src/
+  start.ts                 Start instance + request/function middleware
+  router.tsx               QueryClient, tRPC client, router factory — edit defaults here, not per page
+  routes/                  File-based URLs. This is the only place `createFileRoute` lives.
+    __root.tsx             HTML shell, providers
+    index.tsx              `/`
+    _auth.tsx              Pathless layout. URLs are `/sign-in`, not `/_auth/sign-in`
+    _auth/*.tsx            Guest pages
+    dashboard/route.tsx    Auth layout + `beforeLoad` guard
+    dashboard/*.tsx        Signed-in pages
+    api/auth/$.ts          Better Auth catch-all — do not add extra auth HTTP routes
+    api/trpc/$.ts          tRPC adapter — do not add extra domain HTTP routes
+  components/<feature>/    Presentational / composed UI. No `createServerFn`, no tRPC routers.
+  hooks/                   Hooks shared by 2+ components, or that enforce a cache invariant (`useUser`)
+  lib/<domain>/            Clients, queryOptions, query keys, pure helpers
+  functions/               `createServerFn` only
+  middleware/              `createMiddleware` only
+  public/logos/            Static brand files. URL is `/logos/<file>`, never `/logo/`
+```
+
+## Route files
+
+- One route module = URL + `head` + `beforeLoad`/`loader` + page composition.
+- Pathless layouts use a `_` prefix (`_auth`). Layouts that should be in the URL use a folder + `route.tsx` (`dashboard/route.tsx`).
+- Auth gates belong in `beforeLoad` via `queryClient.fetchQuery(...)`. Do not `useEffect` + `navigate` to bounce guests.
+- Page-only forms stay in the route file. A form reused by two routes moves to `components/<feature>/`.
+
+## Components vs lib vs hooks
+
+| Put it in | When |
+| --- | --- |
+| `routes/` | It is a page or layout |
+| `components/<feature>/` | It is UI for that feature |
+| `lib/<domain>/` | queryOptions, keys, auth client, redirect helpers |
+| `hooks/` | React hook wrapping Query/router that multiple files need |
+
+Do not fetch in a component with `useEffect`. Do not put query keys in the component file — they live next to `queryOptions` in `lib/`.

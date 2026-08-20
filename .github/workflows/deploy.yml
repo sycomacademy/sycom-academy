@@ -1,5 +1,8 @@
-# Build the image, push it to ACR, roll the container app onto it, then run
-# migrations from inside the VNet.
+# Production only. Build the image, push it to ACR, roll the container app onto
+# it, then run migrations from inside the VNet.
+#
+# Pull requests do not run this: they build the same Dockerfile in image.yml
+# without pushing. Format, types, and the bun build live in ci.yml.
 #
 # Authentication is OIDC against a user-assigned managed identity — there is no
 # client secret in this repository. Infrastructure is not touched here: Bicep

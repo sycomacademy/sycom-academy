@@ -1,0 +1,42 @@
+---
+description: Repo map, stack lock, and package ownership. Apply before adding files, libraries, or APIs.
+alwaysApply: true
+---
+
+# Architecture
+
+Sycom Learn is Bun + Turborepo. The UI app is TanStack Start (`apps/dashboard`), not Next.js.
+
+## Where new code goes
+
+| Kind of change | Put it in |
+| --- | --- |
+| Page, layout, URL, `beforeLoad`, `head` | `apps/dashboard/src/routes/` |
+| Feature UI used by a route | `apps/dashboard/src/components/<feature>/` |
+| Query keys / queryOptions / pure helpers | `apps/dashboard/src/lib/<domain>/` |
+| Hook that wraps a query (e.g. `useUser`) | `apps/dashboard/src/hooks/` |
+| Cookie/session Start server fn | `apps/dashboard/src/functions/` |
+| Start middleware | `apps/dashboard/src/middleware/` |
+| Domain read/write (users, courses, …) | `packages/api/src/routers/` |
+| DB table / relations | `packages/db/src/schema/` |
+| Button, Field, Dialog, … | `packages/ui/src/components/` |
+| Env var | `packages/env` then use `env.*` — never `process.env` in app code |
+
+Do not create `apps/dashboard/src/components/ui`, `utils/`, `store/`, or `services/`.
+
+## Stack lock
+
+- **Router:** TanStack Router file routes. `Link` / `redirect` / `createFileRoute` from `@tanstack/react-router`.
+- **Domain API:** tRPC procedure. HTTP adapter is already `routes/api/trpc/$.ts`.
+- **Session:** `getSession` server fn + `sessionQueryOptions`. Not `authClient.useSession()` for dashboard gates.
+- **Auth mutations:** `authClient.signIn` / `signUp` / `signOut` against `/api/auth/$`.
+- **Validation:** `import { z } from "zod"` (classic Zod 4). Same schema on the form and the procedure when both exist.
+- **Forms:** React Hook Form + `zodResolver`. See `forms.mdc`.
+- **Feedback:** `toastManager.add({ title, type: "error" | "success" })`.
+- **Logs:** `createLoggerWithContext("domain")`. No `console.log`.
+
+## Conflicts with generic skills
+
+This repo's Button has a `loading` prop. Use it. Do not compose a raw Spinner unless you are changing `packages/ui`.
+
+Do not add a library that duplicates something in the table above. If you think you need Next.js, axios, Zustand, SWR, or TanStack Form — you don't.

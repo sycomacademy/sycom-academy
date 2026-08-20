@@ -8,7 +8,7 @@ import { toastManager } from "@sycom-learn/ui/components/toast";
 
 import Loader from "./components/loader";
 import { routeTree } from "./routeTree.gen";
-import { TRPCProvider } from "./utils/trpc";
+import { TRPCProvider } from "./lib/trpc/trpc";
 
 function createQueryClient() {
   return new QueryClient({
@@ -27,7 +27,7 @@ function createQueryClient() {
         });
       },
     }),
-    defaultOptions: { queries: { staleTime: 60 * 1000 } },
+    defaultOptions: { queries: { staleTime: 3 * 60 * 1000 } },
   });
 }
 
