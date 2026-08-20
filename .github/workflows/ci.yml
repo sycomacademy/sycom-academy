@@ -1,12 +1,12 @@
 # Cheap gates: lint, format, types, and a bun build. No Azure.
 #
-# Runs on every push (including main after merge) and on pull requests so the
-# required check on main is reported against the PR. The container image is a
-# separate workflow, and production deploys stay in deploy.yml.
+# pull_request covers branches. push is main only so a PR is not charged
+# twice (and so concurrency does not cancel one of those two as a red check).
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:

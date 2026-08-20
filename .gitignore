@@ -9,7 +9,6 @@ build
 *.tsbuildinfo
 
 # Generated files
-apps/dashboard/src/routeTree.gen.ts
 local.db
 local.db-*
 
