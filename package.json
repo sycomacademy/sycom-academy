@@ -39,6 +39,11 @@
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "vm:up": "./scripts/access-vm.sh up",
+    "vm:down": "./scripts/access-vm.sh down",
+    "vm:status": "./scripts/access-vm.sh status",
+    "db:token": "./scripts/db-token.sh",
+    "db:password": "./scripts/db-password.sh",
     "check": "oxlint && oxfmt --write"
   },
   "dependencies": {

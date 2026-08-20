@@ -167,7 +167,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
 }
 
 // The router is only needed during an incident, so it stops itself overnight.
-// Start it again with: az vm start -g <rg> -n <name>
+// Start it again with: bun run vm:up
 // Gated: Microsoft.DevTestLab is not registered on this subscription, and the
 // RG-scoped identity cannot register providers. Flip on after someone with
 // subscription rights runs: az provider register --namespace Microsoft.DevTestLab

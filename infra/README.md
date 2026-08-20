@@ -40,7 +40,7 @@ the data migration.
 | Private endpoint | `sycomacademy-postgres-pe` | `10.20.2.4`, registered in `privatelink.postgres.database.azure.com` |
 | Key Vault | `sycomacademykv01` | RBAC, soft-delete 90 days, purge protection |
 | CI identity | `sycomacademy-github-mi` | User-assigned, federated to GitHub Actions |
-| Access VM | `sycomacademy-access` | Tailscale subnet router, no public IP, auto-shutdown |
+| Access VM | `sycomacademy-access` | Tailscale subnet router, no public IP. Deallocate with `bun run vm:down`. |
 | Log Analytics / App Insights | `sycomacademy-logs` / `sycomacademy-appi` | |
 
 ### Why the database has no public endpoint
@@ -297,27 +297,31 @@ network.
 ## Developer database access with DataGrip
 
 The database has no public endpoint. `sycomacademy-access` is a Tailscale subnet
-router inside the VNet that advertises `10.20.0.0/16`, which puts the private
-endpoint one hop from any machine on the tailnet.
+router inside the VNet. It advertises `10.20.0.0/16`, which puts the private
+endpoint (`10.20.2.4`) one hop from any machine on the tailnet.
 
-The VM is deployed (`10.20.2.20`, Tailscale `100.86.251.40`). Overnight auto-shutdown
-is **off**: it uses `Microsoft.DevTestLab/schedules`, that provider is not registered
-on the subscription, and a RG-scoped identity cannot register it. Until someone with
-subscription rights runs `az provider register --namespace Microsoft.DevTestLab` and
-`deployAutoShutdown` is flipped on in [`modules/access-vm.bicep`](modules/access-vm.bicep),
-stop it yourself when you are done:
+The VM is at `10.20.2.20` (Tailscale `100.86.251.40`). Overnight auto-shutdown is
+**off** until `Microsoft.DevTestLab` is registered on the subscription. Deallocate
+it when you are done so compute stops billing (the OS disk still does, ~$3/month):
 
 ```bash
-az vm deallocate -g sycomlearn-prod-rg -n sycomacademy-access
+bun run vm:up       # start
+bun run vm:status   # PowerState
+bun run vm:down     # deallocate — do not `az vm stop`
 ```
+
+Wait ~20s after `vm:up` for Tailscale before connecting.
 
 ### One-time setup (Tailscale admin console)
 
-Routes are advertised. They do nothing until you approve them.
+Routes for `sycomacademy-access` are **approved** (`10.20.0.0/16` and
+`168.63.129.16/32`). Remaining:
 
-1. Approve the advertised routes for `sycomacademy-access` (`10.20.0.0/16` and `168.63.129.16/32`).
-2. Add a **split DNS** nameserver: `168.63.129.16`, restricted to the domain `postgres.database.azure.com`. This is Azure's platform resolver, which is what makes the private DNS zone resolve from your laptop.
-3. Disable key expiry for the node, or it drops off the tailnet after 180 days.
+1. Add a **split DNS** nameserver: `168.63.129.16`, restricted to
+   `postgres.database.azure.com`. Until that exists, the FQDN resolves to the
+   public VIP (`40.x`) and DataGrip times out with "The connection attempt failed."
+   Use `10.20.2.4` instead.
+2. Disable key expiry for the node, or it drops off the tailnet after 180 days.
 
 Rebuilding the VM needs the two Key Vault secrets to still exist (`tailscale-authkey`,
 `access-vm-admin-password`). The auth key is only consumed at first boot; after that
@@ -333,55 +337,46 @@ azd env set AZURE_PRINCIPAL_NAME a.shehu@sycomsolutions.com
 
 ### Connecting
 
-The VM is running. If you deallocated it, start it first:
-
 ```bash
-az vm start -g sycomlearn-prod-rg -n sycomacademy-access
+bun run vm:up
 ```
 
-Confirm the tailnet is up and the routes are live:
-
-```bash
-az vm run-command invoke -g sycomlearn-prod-rg -n sycomacademy-access --command-id RunShellScript --scripts "tailscale status"
-```
-
-In DataGrip, a new PostgreSQL data source:
+DataGrip PostgreSQL data source — **until split DNS is set, use the private IP:**
 
 | Field | Value |
 |---|---|
-| Host | `sycomacademy-postgres.postgres.database.azure.com` |
+| Host | `10.20.2.4` |
 | Port | `5432` |
 | Database | `sycom` |
-| SSL | on, mode `require` |
+| SSL | on, mode `require` (**not** `verify-full`) |
+| User | `sycomadmin` (or your UPN for Entra) |
 
-If split DNS is misbehaving, connect to `10.20.2.4` directly instead. Keep SSL mode
-at `require`, not `verify-full` — the certificate is issued for
-`*.postgres.database.azure.com` and will not match a bare IP.
+`verify-full` fails against the IP: the cert is for `*.postgres.database.azure.com`.
+Do not use host `sycomacademy-postgres.postgres.database.azure.com` yet — public DNS
+returns a VIP that times out because public access is disabled. After split DNS, that
+FQDN will resolve to `10.20.2.4` and can replace the IP. Never point DataGrip at
+`sycomlearn-prod-postgres` (old stack, different password).
 
-**Authentication — Entra ID (the normal path).** The username is your UPN,
-case-sensitive. The password is an access token:
-
-```bash
-az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv | pbcopy
-```
-
-Paste it into the password field and set **Save: Never**.
-
-> The token is valid for **5 to 60 minutes**. When the connection drops with an
-> authentication error, that is the token expiring — not a broken setup. Run the
-> command again and reconnect. No DataGrip plugin refreshes this automatically, so
-> grab the token immediately before connecting rather than at the start of a
-> session.
-
-**Authentication — local admin (break-glass only).** Use this when Entra itself is
-the problem:
+**Password — local admin (`sycomadmin`).** Does not expire hourly. Copy with no
+trailing newline (`az ... -o tsv | pbcopy` causes `28P01`):
 
 ```bash
-az keyvault secret show --vault-name sycomacademykv01 --name postgres-admin-password --query value -o tsv
+bun run db:password
 ```
 
-Username `sycomadmin`. This account has `CREATEDB` and full server rights. It is
-not the normal path and should not be used for routine work.
+This account has `CREATEDB` and full server rights.
+
+**Password — Entra ID.** Username is your UPN, case-sensitive. The password is an
+access token, minted **every session**, immediately before Connect. It lasts about
+60 minutes from mint (often less if `az` hands you a cached leftover). It cannot be
+lengthened on this stack.
+
+```bash
+bun run db:token
+```
+
+Paste into the password field, **Save: Never**. When the session drops with an
+auth error, run `db:token` again.
 
 ### When Tailscale is unavailable
 
@@ -435,7 +430,7 @@ Approximate, `uksouth`, pay-as-you-go, single environment.
 | Container app, 0.5 vCPU / 1 GiB, min 1 replica | ~30 |
 | PostgreSQL `Standard_B1ms` + 32 GB Premium SSD | ~18 |
 | Private endpoint | ~7 |
-| Access VM `Standard_B1s` + 30 GB disk (no auto-shutdown yet) | ~12 |
+| Access VM `Standard_B1s` + 30 GB disk | ~12 running, ~3 deallocated (`bun run vm:down`) |
 | Container registry, Basic | ~5 |
 | Log Analytics + Application Insights, low volume | ~5 |
 | Key Vault, virtual network, private DNS zone | ~1 |
@@ -455,7 +450,8 @@ it only once monitoring shows the burst credit balance running down.
 
 | Item | Why |
 |---|---|
-| Access VM auto-shutdown | Needs `Microsoft.DevTestLab` registered at subscription scope. Until then deallocate the VM when idle. |
+| Access VM auto-shutdown | Needs `Microsoft.DevTestLab` registered at subscription scope. Until then `bun run vm:down` when idle. |
+| Tailscale split DNS | Routes are approved. Add nameserver `168.63.129.16` for `postgres.database.azure.com` so the FQDN works in DataGrip. Until then use host `10.20.2.4`. |
 | Managed-identity database auth for the app | Entra auth is enabled on the server but the app still uses a connection-string password. Removing it means wiring `pg`'s async password callback to `DefaultAzureCredential` with token caching, and registering the app's identity with `pgaadauth_create_principal`. Application work, not infrastructure. |
 | ACR retention policy | Basic has a 10 GB quota and every deploy adds a manifest. |
 | Front Door, WAF, custom domain | Needed at cutover. |

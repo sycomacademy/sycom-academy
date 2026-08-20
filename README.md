@@ -73,8 +73,9 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 ## Deployment
 
 Production runs on Azure Container Apps in `sycomlearn-prod-rg` (UK South), against
-a private PostgreSQL Flexible Server. Full details, including how to reach the
-database from DataGrip, are in [`infra/README.md`](infra/README.md).
+a private PostgreSQL Flexible Server. How to reach it from DataGrip (access VM,
+host `10.20.2.4`, `bun run db:password` / `db:token`) is in
+[`infra/README.md`](infra/README.md#developer-database-access-with-datagrip).
 
 **Pushing to `main` deploys.** `.github/workflows/deploy.yml` builds the image,
 pushes it to Azure Container Registry, rolls the container app onto the new
@@ -129,3 +130,8 @@ sycom-learn/
 - `bun run docker:up`: Build and start the Docker Compose stack
 - `bun run docker:logs`: Tail logs from the Docker Compose stack
 - `bun run docker:down`: Stop the Docker Compose stack
+- `bun run vm:up`: Start the Tailscale access VM (prod DataGrip path)
+- `bun run vm:down`: Deallocate the access VM (stops compute billing)
+- `bun run vm:status`: Access VM power state
+- `bun run db:password`: Copy `sycomadmin` password for DataGrip (no trailing newline)
+- `bun run db:token`: Copy a fresh Entra token for DataGrip (expires ~1 hour)

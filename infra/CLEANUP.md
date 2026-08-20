@@ -19,27 +19,13 @@ anything in the sunset list.
 These are not in the Bicep template, not on the CI path, and not serving
 users. They were created while choosing a host and then abandoned.
 
-### 1. Azure Static Web Apps
+### Done — Azure Static Web Apps
 
-A GitHub Action (`azure-static-web-apps-victorious-coast-0f0901a03.yml`) was
-added by the Azure SWA flow and deleted in the same session. The site and
-its deploy token were left behind.
+Deleted 2026-08-20. ARM GET for `sycom-academy` returns NotFound. The GitHub
+secret `AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_COAST_0F0901A03` is gone.
+A stale name may still appear in `az resource list` for a short time.
 
-| What | Name |
-|---|---|
-| Static Web App | `sycom-academy` |
-| Hostname | `https://victorious-coast-0f0901a03.7.azurestaticapps.net/` (still 200) |
-| GitHub secret | `AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_COAST_0F0901A03` |
-
-```bash
-az staticwebapp delete -g sycomlearn-prod-rg -n sycom-academy --yes
-```
-
-```bash
-gh secret delete AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_COAST_0F0901A03 --repo sycomacademy/sycom-academy
-```
-
-### 2. Leftover ACR repository from early `azd up`
+### 1. Leftover ACR repository from early `azd up`
 
 CI publishes `sycom-learn/dashboard`, tagged with the commit SHA. The
 `-sycomacademy-alpha` repository is from the first laptop builds and is
@@ -55,7 +41,7 @@ az acr repository delete -n sycomacademyacr01 --repository sycom-learn/dashboard
 
 Do **not** delete `sycom-learn/dashboard`. That is the running app.
 
-### 3. Neon project created during the rebuild
+### 2. Neon project created during the rebuild
 
 Production Postgres is `sycomacademy-postgres`. This Neon project was
 created the day of the rebuild, last compute the same evening, and is not
@@ -143,10 +129,10 @@ option — the new `sycomacademy-*` resources live in the same group.
 These are unfinished on the new stack, not orphans. Tracked in
 [`README.md`](./README.md#known-follow-ups).
 
-- Tailscale access VM (`sycomacademy-access`) — deployed. Remaining work is in
-  the Tailscale admin console (approve routes, split DNS, disable key expiry).
-  Overnight auto-shutdown is off until `Microsoft.DevTestLab` is registered on
-  the subscription.
+- Tailscale access VM (`sycomacademy-access`) — deployed, routes approved.
+  Remaining: split DNS and disable key expiry in the Tailscale admin console.
+  Overnight auto-shutdown is off until `Microsoft.DevTestLab` is registered.
+  Until then `bun run vm:down` when idle.
 - Front Door, WAF, custom domain on `sycomacademy-app` — needed at cutover.
 - Staging environment.
 - Slimmer runner image and cheaper migration-job CLI calls.
