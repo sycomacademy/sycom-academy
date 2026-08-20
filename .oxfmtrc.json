@@ -5,5 +5,14 @@
     "stylesheet": "./packages/ui/src/styles/globals.css",
     "functions": ["clsx", "cn", "cva"]
   },
-  "ignorePatterns": ["node_modules", ".next", "dist", "build", ".cursor", ".claude", ".agents"]
+  "ignorePatterns": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    ".cursor",
+    ".claude",
+    ".agents",
+    "packages/db/src/migrations/**"
+  ]
 }
