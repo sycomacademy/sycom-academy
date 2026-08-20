@@ -38,6 +38,9 @@ export default defineConfig({
     tanstackStart(),
     nitro({
       preset: "node-server",
+      // Copy react + react-dom into the server output as one traced graph so
+      // inlined chunks and CJS require("react") cannot resolve two copies.
+      traceDeps: ["react", "react-dom"],
       rolldownConfig: { external: reactExternals },
     }),
     viteReact(),

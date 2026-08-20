@@ -98,7 +98,17 @@ CI is unaffected: `sycomacademy-github-mi` holds permanent assignments.
 
 ### Infrastructure
 
-Bicep changes go out from a laptop, not from CI:
+Bicep changes go out from a laptop, not from CI.
+
+**Sync the image name first.** CI deploys images that `azd` does not know about, and
+`azd` passes its stored `SERVICE_DASHBOARD_IMAGE_NAME` into the template. If it is
+stale, provisioning rolls production back to an older image:
+
+```bash
+azd env set SERVICE_DASHBOARD_IMAGE_NAME "$(az containerapp show -g sycomlearn-prod-rg -n sycomacademy-app --query 'properties.template.containers[0].image' -o tsv)"
+```
+
+Then:
 
 ```bash
 azd provision --preview   # ARM what-if; read it before applying
@@ -164,17 +174,30 @@ Read the client id after provisioning:
 az identity show -g sycomlearn-prod-rg -n sycomacademy-github-mi --query clientId -o tsv
 ```
 
-The federated credential is scoped to exactly one subject:
+Two federated credentials are registered, and both are scoped to `main`:
 
 ```
 repo:sycomacademy/sycom-academy:ref:refs/heads/main
+repo:sycomacademy@259377858/sycom-academy@1339824334:ref:refs/heads/main
 ```
 
+The second exists because **GitHub presents the id-qualified form**, not the plain
+one. Registering only the plain subject fails at `azure/login` with
+`AADSTS700213: No matching federated identity record found`, which does not hint at
+what is wrong. Confirm the prefix your repo actually sends with:
+
+```bash
+gh api repos/sycomacademy/sycom-academy/actions/oidc/customization/sub
+```
+
+If `sub_claim_prefix` ever changes — it embeds the numeric owner and repo ids, so
+deleting and recreating the repository would change it — update
+`githubRepositoryWithIds` in [`main.bicep`](main.bicep) and re-provision.
+
 A workflow on any other branch, and any pull request including from a fork, cannot
-obtain a token. To let another branch deploy, add a second
-`federatedIdentityCredentials` resource in
-[`modules/github-identity.bicep`](modules/github-identity.bicep) — do not widen the
-existing subject.
+obtain a token. To let another branch deploy, add its subjects to the `subjects`
+array in [`modules/github-identity.bicep`](modules/github-identity.bicep) — do not
+widen an existing subject.
 
 CI's permissions are deliberately narrow: `AcrPush` on the registry, and
 `Contributor` on the container app and the migration job **as individual
