@@ -43,6 +43,9 @@ param githubRepository string = 'sycomacademy/sycom-academy'
 @description('Branch allowed to deploy. Only workflows on this ref can obtain a token.')
 param githubBranch string = 'main'
 
+@description('GitHub owner and repository qualified with their numeric ids, as owner@ownerId/repo@repoId. GitHub qualifies the OIDC subject with these, so the federated credential must match. Read with: gh api repos/<owner>/<repo> --jq .')
+param githubRepositoryWithIds string = 'sycomacademy@259377858/sycom-academy@1339824334'
+
 @description('Image the container app and migration job run. Empty on a first provision; otherwise the image currently deployed, so provisioning never rolls the app back to the placeholder. CI and azd both supply this.')
 param containerImageName string = ''
 
@@ -183,6 +186,7 @@ module githubIdentity './modules/github-identity.bicep' = {
   params: {
     name: '${resourcePrefix}-github-mi'
     repository: githubRepository
+    repositoryWithIds: githubRepositoryWithIds
     branch: githubBranch
     location: location
     tags: tags
