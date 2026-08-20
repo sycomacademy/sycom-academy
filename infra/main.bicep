@@ -1,8 +1,9 @@
 // Alpha stack for the sycom-learn rebuild.
 //
 // Scoped to a resource group rather than the subscription because the deploying
-// identity holds Contributor on sycomlearn-prod-rg only. azd must therefore have
-// AZURE_RESOURCE_GROUP set. See .azure/deployment-plan.md section 6b.
+// identity holds Contributor on sycomlearn-prod-rg only, and that assignment is
+// PIM-eligible rather than permanent. azd must therefore have AZURE_RESOURCE_GROUP
+// set. See infra/README.md.
 targetScope = 'resourceGroup'
 
 @minLength(1)

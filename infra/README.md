@@ -9,8 +9,18 @@ bootstrap, and incident response — they are not the source of truth.
 - **Resource group:** `sycomlearn-prod-rg`
 - **Region:** `uksouth`
 
-The background — why this shape, what was rejected, and the cutover plan away from
-the older `sycomlearn-*` resources — is in [`.azure/deployment-plan.md`](../.azure/deployment-plan.md).
+This stack runs alongside the older `sycomlearn-*` resources in the same resource
+group. At cutover the custom domain `learn.sycom.academy` moves onto
+`sycomacademy-app`, the data is migrated, and the `sycomlearn-*` resources are
+deleted. Azure resources cannot be renamed, so the `sycomacademy-*` names are
+permanent — "renaming to learn" means moving the domain, not the resource.
+
+**Why UK South.** Users are mostly in Lagos. UK South is the nearest region with
+the full PaaS catalogue: South Africa North is geographically closer, but routing
+from Lagos to Johannesburg is frequently worse than Lagos to London, because
+subsea capacity on the west-Africa cables lands in Europe. It also keeps this
+stack colocated with the resources it will eventually replace, which matters for
+the data migration.
 
 ---
 
@@ -55,11 +65,26 @@ for one developer. Recorded here so it does not get re-litigated.
 
 ### Why ingress is public
 
-Front Door is not deployed yet (see the deployment plan for the reasoning). When it
-is, the app should validate the `X-Azure-FDID` header rather than making the
-environment internal — switching an environment to internal is not reversible in
-place. The alternative, Front Door Premium with Private Link origins, is about
-$330/month against roughly $35 for Standard.
+Front Door is not deployed yet. This is server-rendered: HTML is per-request and
+uncacheable, so a CDN adds a hop to the slow part, and Vite already emits
+content-hashed immutable assets the browser caches after first load. Front Door
+Standard is about $35/month plus egress and adds a second TLS and DNS surface to
+debug. It becomes worth it at cutover, when the custom domain and WAF are needed,
+and for its split-TCP and warm origin connections, which matter more to long-haul
+Lagos clients than caching does.
+
+When it does land, the app should validate the `X-Azure-FDID` header rather than
+making the environment internal — switching an environment to internal is not
+reversible in place. The alternative, Front Door Premium with Private Link
+origins, is about $330/month against roughly $35 for Standard.
+
+### Other things deliberately left out
+
+| Service | Why not |
+|---|---|
+| Azure Cache for Redis | Nothing needs it. Better Auth sessions live in Postgres and B1ms handles this load. Revisit on session-lookup pressure, or when rate limiting needs state shared across replicas. ~$16/month. |
+| Load balancer / Application Gateway | Container Apps ingress already terminates TLS and balances across replicas. Application Gateway duplicates that from ~$180/month. |
+| API Management | One consumer — this app's own browser client calling its own tRPC endpoints. No third party, no partner keys, no quotas, no versioning. From ~$50/month to solve a problem that does not exist. |
 
 ---
 
@@ -77,6 +102,39 @@ Public access and private endpoints **can** coexist on this server — you can f
 emergency fallback if Tailscale is unavailable, but it is not the normal path.
 
 ---
+
+## Two deployment paths
+
+There are two, and they own different things. Using the wrong one is how
+production gets rolled back.
+
+| | GitHub Actions | `azd` |
+|---|---|---|
+| Owns | The **image** the app runs | The **resources** the app runs on |
+| Runs | Automatically, on push to `main` | Manually, from your laptop |
+| Does | build → push to ACR → new revision → migrations → smoke check | applies `infra/**` Bicep to Azure |
+| Auth | OIDC as `sycomacademy-github-mi`, no secret | your `az login`, needs PIM activation |
+| Takes | about 4 minutes | about 3 minutes |
+| Touches the database | only through the migration job | no |
+| Touches networking, vault, Postgres config | no | yes |
+
+**Use GitHub Actions** — that is, just push — for anything under `apps/`,
+`packages/`, or `scripts/`. Application code, schema migrations, dependency
+bumps. This is the normal path and should be almost every deploy.
+
+**Use `azd provision`** when you have changed something under `infra/`: a new
+resource, an SKU, a firewall or network setting, a role assignment, a Key Vault
+secret wired into the template. Preview it first, apply it, and let the next push
+handle the app.
+
+**Use `azd up`** only to deploy app *and* infrastructure together — a first
+provision, or a disaster-recovery rebuild. In day-to-day work you should not need
+it, and it duplicates what CI already does.
+
+They overlap in exactly one place: both can set the container app's image. CI sets
+it from the commit SHA; `azd` sets it from the `SERVICE_DASHBOARD_IMAGE_NAME` it
+has stored. If that stored value is stale, provisioning rolls production back —
+which is why the sync command below exists.
 
 ## Deploying
 
@@ -146,6 +204,36 @@ public URL.
 > what `azd` does. That is correct for additive migrations. For a destructive one —
 > dropping or renaming a column the running code still reads — deploy the migration
 > on its own commit first, then the code that depends on it.
+
+### How long a deploy takes
+
+Measured on run 32318429891, before the layer cache was removed:
+
+| Step | Time |
+|---|---|
+| Build and push | 2m13s |
+| Run migrations | 1m17s |
+| Roll the container app onto the new image | 19s |
+| Install the containerapp extension | 11s |
+| Sign in to Azure + registry | 12s |
+| Everything else | ~20s |
+
+Two things dominate, and neither is the actual build — `bun install` takes 6s and
+`vite build` takes 7s. The rest is moving bytes around.
+
+- **Image export and push, ~48s.** The runner stage copies the whole monorepo
+  including dev dependencies: 846 MB uncompressed, 250 MB in the registry. Worth
+  slimming eventually, but note that `bun install --production` does **not** help —
+  bun's isolated store keeps every package under `node_modules/.bun` regardless, and
+  the image comes out byte-identical. A real fix needs a separate deps stage that
+  installs from the lockfile alone.
+- **The migration step, ~1m17s**, of which about 40s is Azure CLI calls
+  re-applying settled configuration: `job registry set` takes 21s to report that the
+  registry is already set, and `job update --image` another 19s. The migration
+  itself runs in about 34s, mostly pulling that 250 MB image cold.
+
+The GitHub Actions layer cache was removed after measuring it at 64s per run for no
+benefit — see the comment in the workflow.
 
 ### Rolling back
 
@@ -382,4 +470,5 @@ it only once monitoring shows the burst credit balance running down.
 | ACR retention policy | Basic has a 10 GB quota and every deploy adds a manifest. |
 | Front Door, WAF, custom domain | Needed at cutover. |
 | Staging environment | The template is parameterised for it; it is a params file and a non-overlapping address space away. |
-| Runner image size | The image ships the full `node_modules` including dev dependencies, because React is resolved at runtime rather than bundled. A pruned production install would cut it substantially. |
+| Runner image size | 846 MB, of which 758 MB is `node_modules` that only the build needs — turbo, typescript, the rolldown and oxlint native bindings, plus UI libraries that are already inlined into `.output`. Needs a separate deps stage; `bun install --production` alone changes nothing. Would speed up both the image push and the migration job's cold start. |
+| Redundant CLI calls in `scripts/postdeploy.sh` | `job registry set` runs on every deploy and takes 21s to confirm what Bicep already declares. Worth making conditional. |

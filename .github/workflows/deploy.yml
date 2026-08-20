@@ -56,8 +56,12 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       # Built here rather than by ACR Tasks: the runner is already amd64, so no
-      # cross-build is needed, and the classic builder ACR Tasks uses cannot cache
-      # layers between runs.
+      # cross-build is needed.
+      #
+      # No GitHub Actions layer cache. It was measured at 23s to prepare plus 41s
+      # to upload, and bought nothing: `COPY . .` sits above `bun install`, so every
+      # commit invalidates both, and the two together only take 13s. The base images
+      # come from Docker Hub in about 10s either way.
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -67,8 +71,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
             ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_REPOSITORY }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       # The immutable sha tag, not :latest, so a rollback is a single command
       # against a tag that cannot have moved.

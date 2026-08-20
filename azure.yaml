@@ -2,7 +2,8 @@
 name: sycom-learn
 
 # infra/main.bicep is resource-group scoped, so AZURE_RESOURCE_GROUP must be set
-# in the azd environment. See .azure/deployment-plan.md section 6b.
+# in the azd environment: the deploying identity holds no subscription-level role.
+# See infra/README.md.
 infra:
   provider: bicep
   path: infra

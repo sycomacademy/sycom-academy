@@ -72,18 +72,30 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 ## Deployment
 
-### Docker Compose
+Production runs on Azure Container Apps in `sycomlearn-prod-rg` (UK South), against
+a private PostgreSQL Flexible Server. Full details, including how to reach the
+database from DataGrip, are in [`infra/README.md`](infra/README.md).
 
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: bun run docker:build
-- Start: bun run docker:up
-- Logs: bun run docker:logs
-- Stop: bun run docker:down
+**Pushing to `main` deploys.** `.github/workflows/deploy.yml` builds the image,
+pushes it to Azure Container Registry, rolls the container app onto the new
+revision, applies Drizzle migrations from inside the VNet, and fails the run if the
+app does not come back healthy. Roughly four minutes end to end. No secrets are
+involved — CI authenticates to Azure with OIDC.
 
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
+Infrastructure is separate. Changes under `infra/` are Bicep and go out manually
+with `azd provision`, never from CI. See the two-paths table in
+[`infra/README.md`](infra/README.md#two-deployment-paths) for which to use when.
 
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
+### Local Docker
+
+- Config: `docker-compose.yml`; the app Dockerfile is `apps/dashboard/Dockerfile`
+- Build images: `bun run docker:build`
+- Start: `bun run docker:up`
+- Logs: `bun run docker:logs`
+- Stop: `bun run docker:down`
+
+Runtime environment variables come from `apps/dashboard/.env`, with container
+networking values overridden in `docker-compose.yml`.
 
 ## Git Hooks and Formatting
 
