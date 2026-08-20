@@ -25,23 +25,13 @@ Deleted 2026-08-20. ARM GET for `sycom-academy` returns NotFound. The GitHub
 secret `AZURE_STATIC_WEB_APPS_API_TOKEN_VICTORIOUS_COAST_0F0901A03` is gone.
 A stale name may still appear in `az resource list` for a short time.
 
-### 1. Leftover ACR repository from early `azd up`
+### Done — leftover ACR repository from early `azd up`
 
-CI publishes `sycom-learn/dashboard`, tagged with the commit SHA. The
-`-sycomacademy-alpha` repository is from the first laptop builds and is
-unused.
+Deleted 2026-08-20. Removed `sycom-learn/dashboard-sycomacademy-alpha` (three
+`azd-deploy-*` tags) from `sycomacademyacr01`. The registry now only has
+`sycom-learn/dashboard`, which the running app and migration job pull.
 
-| Registry | Repository | Tags |
-|---|---|---|
-| `sycomacademyacr01` | `sycom-learn/dashboard-sycomacademy-alpha` | `azd-deploy-*` |
-
-```bash
-az acr repository delete -n sycomacademyacr01 --repository sycom-learn/dashboard-sycomacademy-alpha --yes
-```
-
-Do **not** delete `sycom-learn/dashboard`. That is the running app.
-
-### 2. Neon project created during the rebuild
+### 1. Neon project created during the rebuild
 
 Production Postgres is `sycomacademy-postgres`. This Neon project was
 created the day of the rebuild, last compute the same evening, and is not
