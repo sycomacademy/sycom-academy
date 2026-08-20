@@ -32,6 +32,9 @@
     "githubBranch": {
       "value": "${GITHUB_BRANCH=main}"
     },
+    "deployAccessVm": {
+      "value": true
+    },
     "accessVmShutdownNotificationEmail": {
       "value": "${ACCESS_VM_SHUTDOWN_EMAIL=}"
     },

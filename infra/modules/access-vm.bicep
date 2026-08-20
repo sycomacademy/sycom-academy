@@ -36,6 +36,9 @@ param autoShutdownTimeZone string = 'GMT Standard Time'
 @description('Address that receives the shutdown warning. Empty to skip notification.')
 param autoShutdownNotificationEmail string = ''
 
+@description('Create the DevTest Lab auto-shutdown schedule. Requires Microsoft.DevTestLab registered on the subscription. Off by default because this subscription is not registered and the deploying identity cannot register providers.')
+param deployAutoShutdown bool = false
+
 param location string
 param tags object
 
@@ -165,7 +168,10 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
 
 // The router is only needed during an incident, so it stops itself overnight.
 // Start it again with: az vm start -g <rg> -n <name>
-resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = {
+// Gated: Microsoft.DevTestLab is not registered on this subscription, and the
+// RG-scoped identity cannot register providers. Flip on after someone with
+// subscription rights runs: az provider register --namespace Microsoft.DevTestLab
+resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = if (deployAutoShutdown) {
   name: 'shutdown-computevm-${name}'
   location: location
   tags: tags

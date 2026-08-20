@@ -51,7 +51,7 @@ param githubRepositoryWithIds string = 'sycomacademy@259377858/sycom-academy@133
 param containerImageName string = ''
 
 @description('Deploy the Tailscale subnet router that gives developer tooling access to the private database. Off until the tailscale-authkey and access-vm-admin-password secrets exist in Key Vault, because the template reads both with getSecret() and the deployment fails if either is missing. See infra/README.md.')
-param deployAccessVm bool = false
+param deployAccessVm bool = true
 
 @description('Address that receives the access VM auto-shutdown warning. Empty to skip notification.')
 param accessVmShutdownNotificationEmail string = ''
@@ -210,6 +210,7 @@ module accessVm './modules/access-vm.bicep' = if (deployAccessVm) {
     tailscaleAuthKey: existingKeyVault.getSecret('tailscale-authkey')
     adminPassword: existingKeyVault.getSecret('access-vm-admin-password')
     autoShutdownNotificationEmail: accessVmShutdownNotificationEmail
+    deployAutoShutdown: false
     location: location
     tags: tags
   }

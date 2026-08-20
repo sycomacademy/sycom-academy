@@ -12,7 +12,7 @@ bootstrap, and incident response — they are not the source of truth.
 This stack runs alongside the older `sycomlearn-*` resources in the same resource
 group. At cutover the custom domain `learn.sycom.academy` moves onto
 `sycomacademy-app`, the data is migrated, and the `sycomlearn-*` resources are
-deleted. Azure resources cannot be renamed, so the `sycomacademy-*` names are
+deleted. What to delete now vs after that cutover is in [`CLEANUP.md`](CLEANUP.md). Azure resources cannot be renamed, so the `sycomacademy-*` names are
 permanent — "renaming to learn" means moving the domain, not the resource.
 
 **Why UK South.** Users are mostly in Lagos. UK South is the nearest region with
@@ -300,41 +300,30 @@ The database has no public endpoint. `sycomacademy-access` is a Tailscale subnet
 router inside the VNet that advertises `10.20.0.0/16`, which puts the private
 endpoint one hop from any machine on the tailnet.
 
-> **The router is not deployed yet.** `deployAccessVm` in
-> [`main.bicep`](main.bicep) defaults to `false`, because the template reads two
-> Key Vault secrets with `getSecret()` and a deployment fails outright if either is
-> missing. Seed them, flip the default to `true`, then provision.
-
-### One-time setup
-
-**1. Seed the two Key Vault secrets.** Bicep reads both with `getSecret()`, so they
-must exist before `deployAccessVm` is turned on:
+The VM is deployed (`10.20.2.20`, Tailscale `100.86.251.40`). Overnight auto-shutdown
+is **off**: it uses `Microsoft.DevTestLab/schedules`, that provider is not registered
+on the subscription, and a RG-scoped identity cannot register it. Until someone with
+subscription rights runs `az provider register --namespace Microsoft.DevTestLab` and
+`deployAutoShutdown` is flipped on in [`modules/access-vm.bicep`](modules/access-vm.bicep),
+stop it yourself when you are done:
 
 ```bash
-az keyvault secret set --vault-name sycomacademykv01 --name tailscale-authkey --value "tskey-auth-REPLACE-ME"
+az vm deallocate -g sycomlearn-prod-rg -n sycomacademy-access
 ```
 
-```bash
-az keyvault secret set --vault-name sycomacademykv01 --name access-vm-admin-password --value "$(openssl rand -base64 24)"
-```
+### One-time setup (Tailscale admin console)
 
-Generate the Tailscale key in the admin console as **reusable**, **ephemeral off**,
-**pre-authorised**, tagged. It is consumed once at first boot; after that the node
-holds its own identity, so rotating the vault value only matters if the VM is ever
-rebuilt. The local password exists because Azure requires a credential on a Linux
-VM — sign-in is via `tailscale ssh`, so it is never typed.
+Routes are advertised. They do nothing until you approve them.
 
-**2. Turn the module on** — set `deployAccessVm` to `true` in
-[`main.bicep`](main.bicep) and run `azd provision`.
+1. Approve the advertised routes for `sycomacademy-access` (`10.20.0.0/16` and `168.63.129.16/32`).
+2. Add a **split DNS** nameserver: `168.63.129.16`, restricted to the domain `postgres.database.azure.com`. This is Azure's platform resolver, which is what makes the private DNS zone resolve from your laptop.
+3. Disable key expiry for the node, or it drops off the tailnet after 180 days.
 
-**3. In the Tailscale admin console, after the VM boots:**
+Rebuilding the VM needs the two Key Vault secrets to still exist (`tailscale-authkey`,
+`access-vm-admin-password`). The auth key is only consumed at first boot; after that
+the node holds its own identity.
 
-- Approve the advertised routes for `sycomacademy-access` (`10.20.0.0/16` and `168.63.129.16/32`). Routes do nothing until approved.
-- Add a **split DNS** nameserver: `168.63.129.16`, restricted to the domain `postgres.database.azure.com`. This is Azure's platform resolver, which is what makes the private DNS zone resolve from your laptop.
-- Disable key expiry for the node, or it drops off the tailnet after 180 days.
-
-**4. Set the Entra database admin.** Provisioning does this — it is declared in
-[`modules/postgres.bicep`](modules/postgres.bicep) from `AZURE_PRINCIPAL_ID` and
+**Entra database admin.** Provisioning sets this from `AZURE_PRINCIPAL_ID` and
 `AZURE_PRINCIPAL_NAME`. Set `AZURE_PRINCIPAL_NAME` in the azd environment to your
 exact UPN or it is skipped:
 
@@ -344,7 +333,7 @@ azd env set AZURE_PRINCIPAL_NAME a.shehu@sycomsolutions.com
 
 ### Connecting
 
-The VM shuts down nightly. Start it first:
+The VM is running. If you deallocated it, start it first:
 
 ```bash
 az vm start -g sycomlearn-prod-rg -n sycomacademy-access
@@ -446,11 +435,11 @@ Approximate, `uksouth`, pay-as-you-go, single environment.
 | Container app, 0.5 vCPU / 1 GiB, min 1 replica | ~30 |
 | PostgreSQL `Standard_B1ms` + 32 GB Premium SSD | ~18 |
 | Private endpoint | ~7 |
-| Access VM `Standard_B1s` + 30 GB disk, auto-shutdown overnight | ~7 |
+| Access VM `Standard_B1s` + 30 GB disk (no auto-shutdown yet) | ~12 |
 | Container registry, Basic | ~5 |
 | Log Analytics + Application Insights, low volume | ~5 |
 | Key Vault, virtual network, private DNS zone | ~1 |
-| **Total** | **~73** |
+| **Total** | **~78** |
 
 Add about $4 if the access VM turns out to need a public IP for egress. Tailscale's
 free tier covers this usage (3 users, 100 devices).
@@ -466,6 +455,7 @@ it only once monitoring shows the burst credit balance running down.
 
 | Item | Why |
 |---|---|
+| Access VM auto-shutdown | Needs `Microsoft.DevTestLab` registered at subscription scope. Until then deallocate the VM when idle. |
 | Managed-identity database auth for the app | Entra auth is enabled on the server but the app still uses a connection-string password. Removing it means wiring `pg`'s async password callback to `DefaultAzureCredential` with token caching, and registering the app's identity with `pgaadauth_create_principal`. Application work, not infrastructure. |
 | ACR retention policy | Basic has a 10 GB quota and every deploy adds a manifest. |
 | Front Door, WAF, custom domain | Needed at cutover. |
