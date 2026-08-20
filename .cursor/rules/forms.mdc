@@ -1,0 +1,69 @@
+---
+description: React Hook Form + Zod + Field/Form composition for every dashboard form.
+globs: apps/dashboard/**/*.tsx
+alwaysApply: false
+---
+
+# Forms
+
+Every form is: **Zod schema → `useForm` + `zodResolver` → `Form`/`FormField`/`Field` → `toastManager`**.
+
+Do not use TanStack Form, native `FormData` as the source of truth, or uncontrolled inputs without RHF.
+
+## Schema (colocated unless shared with tRPC)
+
+```tsx
+import { z } from "zod";
+
+const exampleSchema = z.object({
+  email: z.email({ error: "Invalid email address" }),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type ExampleInput = z.infer<typeof exampleSchema>;
+```
+
+If a tRPC procedure accepts the same payload, define the schema next to the procedure in `packages/api` and import it here. Do not duplicate.
+
+## Component shape
+
+```tsx
+const form = useForm<ExampleInput>({
+  resolver: zodResolver(exampleSchema),
+  defaultValues: { email: "", password: "" },
+});
+
+<Form {...form} className="flex w-full flex-col gap-4">
+  <form className="contents" onSubmit={form.handleSubmit(onSubmit)}>
+    <FormField
+      control={form.control}
+      name="email"
+      render={({ field, fieldState }) => (
+        <FormItem>
+          <Field>
+            <FieldLabel className="text-xs text-muted-foreground">Email address</FieldLabel>
+            <FormControl>
+              <Input type="email" autoComplete="username" {...field} />
+            </FormControl>
+            <FieldError reserveSpace>{fieldState.error?.message}</FieldError>
+          </Field>
+        </FormItem>
+      )}
+    />
+    <Button type="submit" loading={form.formState.isSubmitting} size="lg">
+      Continue
+    </Button>
+  </form>
+</Form>
+```
+
+## Rules
+
+- `Form` spreads `useForm()` and provides context. The real `<form>` is a child with `className="contents"`.
+- Every control goes through `FormField` → `FormItem` → `Field` → `FormControl`.
+- `FieldError reserveSpace` always — prevents layout jump.
+- Password / prefix / suffix: `InputGroup` + `InputGroupInput` + `InputGroupAddon`. Never a raw `Input` inside `InputGroup`.
+- Checkbox / switch rows: `Field orientation="horizontal"`.
+- Submit: `loading={form.formState.isSubmitting}` on our `Button` (it has a `loading` prop).
+- Success / failure: `toastManager.add({ title, type: "success" | "error" })`. Return early on `error` from auth/tRPC. Catch network failures with a generic connection message.
+- After a mutation that changes cached data: `queryClient.invalidateQueries` for that key, then `router.navigate` if needed.

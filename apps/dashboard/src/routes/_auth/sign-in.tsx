@@ -18,16 +18,16 @@ import { Link, createFileRoute, useRouter, useSearch } from "@tanstack/react-rou
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod/mini";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth/auth-client";
 import { resolvePostAuthRedirect } from "@/lib/auth/auth-redirect";
 import { SESSION_QUERY_KEY } from "@/lib/auth/session";
 
 const signInSchema = z.object({
-  email: z.email("Invalid email address"),
-  password: z.string().check(z.minLength(8, "Password must be at least 8 characters")),
-  rememberMe: z.optional(z.boolean()),
+  email: z.email({ error: "Invalid email address" }),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  rememberMe: z.boolean().optional(),
 });
 
 type SignInInput = z.infer<typeof signInSchema>;
@@ -192,6 +192,30 @@ function SignInPage() {
             </Link>
           </p>
         </div>
+      </div>
+      <div className="mt-auto pt-6 text-center">
+        <p className="text-xs text-muted-foreground">
+          By signing in, you agree to our{" "}
+          <a
+            className={cn(
+              buttonVariants({ variant: "link" }),
+              "px-0 text-muted-foreground transition-colors hover:text-foreground",
+            )}
+            href={`/terms`}
+          >
+            Terms of Service
+          </a>{" "}
+          &amp;{" "}
+          <a
+            className={cn(
+              buttonVariants({ variant: "link" }),
+              "px-0 text-muted-foreground transition-colors hover:text-foreground",
+            )}
+            href={`/privacy`}
+          >
+            Privacy Policy
+          </a>
+        </p>
       </div>
     </div>
   );

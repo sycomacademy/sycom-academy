@@ -1,12 +1,13 @@
+import { Image } from "@sycom-learn/ui/image";
 import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
-import * as z from "zod/mini";
+import { z } from "zod";
 
 import { AuthLeftPanel } from "@/components/auth/left-panel";
 import { safeRedirectPath } from "@/lib/auth/auth-redirect";
 import { sessionQueryOptions } from "@/lib/auth/session";
 
 const authSearchSchema = z.object({
-  redirect: z.optional(z.string()),
+  redirect: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_auth")({
@@ -31,8 +32,15 @@ function AuthLayout() {
         <div className="flex h-full w-full max-w-md flex-col">
           <div className="mb-8 flex items-center lg:hidden">
             <Link className="flex items-center gap-2" to="/sign-in">
-              <span className="flex size-12 items-center justify-center rounded bg-primary text-lg font-semibold text-primary-foreground">
-                S
+              <span className="flex size-12 items-center justify-center overflow-hidden rounded">
+                <Image
+                  alt="Sycom Solutions logo"
+                  height={48}
+                  layout="fixed"
+                  loading="eager"
+                  src="/logos/sycom-logo-icon.png"
+                  width={48}
+                />
               </span>
             </Link>
           </div>

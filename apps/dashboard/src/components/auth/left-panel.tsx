@@ -1,9 +1,8 @@
 import { Link } from "@tanstack/react-router";
-
+import { Image } from "@sycom-learn/ui/image";
 import { FlickeringGrid } from "./flickering-grid";
+import { LoginTestimonials } from "./testimonials";
 
-// The marketing testimonials from the main app are not ported yet — this is the
-// same treatment (grid + top/bottom fades) with a plain wordmark in their place.
 export function AuthLeftPanel() {
   return (
     <>
@@ -20,28 +19,36 @@ export function AuthLeftPanel() {
         className="absolute top-6 left-6 z-20 flex items-center gap-2 transition-opacity hover:opacity-80"
         to="/"
       >
-        <span className="flex size-12 items-center justify-center rounded bg-white/10 text-lg font-semibold text-white">
-          S
-        </span>
+        <div className="flex size-20 items-center justify-center overflow-hidden rounded">
+          <Image
+            alt="Sycom Solutions logo"
+            height={80}
+            layout="fixed"
+            loading="eager"
+            src="/logos/sycom-logo-icon.png"
+            width={80}
+          />
+        </div>
       </Link>
 
       <div className="relative z-10 flex h-full w-full items-center justify-center p-8">
-        <div className="max-w-lg space-y-4">
-          <p className="text-3xl leading-tight font-medium text-white">
-            Everything your team learns, in one place.
-          </p>
-          <p className="text-sm text-white/70">Sycom Solutions</p>
+        <div className="max-w-lg">
+          <LoginTestimonials />
         </div>
       </div>
 
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-10 h-32"
-        style={{ background: "linear-gradient(to bottom, black, transparent)" }}
+        style={{
+          background: "linear-gradient(to bottom, black, transparent)",
+        }}
       />
 
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-32"
-        style={{ background: "linear-gradient(to top, black, transparent)" }}
+        style={{
+          background: "linear-gradient(to top, black, transparent)",
+        }}
       />
     </>
   );

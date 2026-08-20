@@ -1,0 +1,69 @@
+---
+description: Zod schemas, TanStack Query, tRPC vs server functions, cache invalidation.
+globs: apps/dashboard/**/*.{ts,tsx},packages/api/**/*.ts
+alwaysApply: false
+---
+
+# Data and validation
+
+## Zod
+
+```ts
+import { z } from "zod";
+```
+
+Zod 4 classic only. Do not use `zod/mini` (different methods; agents will generate broken schemas). Do not add Yup/Valibot/io-ts.
+
+- Forms and tRPC procedures that share a payload **share one schema**. Live in `packages/api` next to the procedure.
+- Search params: `validateSearch` with a Zod object on the route (see `_auth.tsx`).
+- Infer types with `z.infer<typeof schema>`. Do not declare a parallel `interface`.
+
+## What fetches what
+
+| Need | Mechanism |
+| --- | --- |
+| Domain read/write (users, courses, orgs) | tRPC procedure in `packages/api/src/routers/` |
+| Session from the auth cookie | `createServerFn` + `sessionMiddleware` + `sessionQueryOptions` |
+| Sign-in / sign-up / sign-out | `authClient` (Better Auth HTTP) |
+
+Do not `fetch("/api/...")`, axios, SWR, or `useEffect` + `setState` for server data.
+
+## tRPC
+
+- `publicProcedure` vs `protectedProcedure` from `packages/api`. Mutations that need a user are protected.
+- Input: `.input(schema)`. Parse inside the procedure — never trust the client.
+- New routers: `packages/api/src/routers/<domain>.ts`, merge onto `appRouter` in `routers/index.ts`.
+- Client: `useTRPC()` / `context.trpc` from `@trpc/tanstack-react-query`.
+
+```tsx
+const trpc = useTRPC();
+const { data } = useSuspenseQuery(trpc.privateData.queryOptions());
+const mutation = useMutation(
+  trpc.something.create.mutationOptions({
+    onSuccess: () => queryClient.invalidateQueries(trpc.something.list.queryFilter()),
+  }),
+);
+```
+
+In `beforeLoad`, prefetch with `context.queryClient.ensureQueryData(context.trpc.x.queryOptions())`.
+
+## Query options (non-tRPC)
+
+Custom queries (session) live in `lib/<domain>/`:
+
+```ts
+export const SESSION_QUERY_KEY = ["session"] as const;
+
+export const sessionQueryOptions = () =>
+  queryOptions({
+    queryKey: SESSION_QUERY_KEY,
+    queryFn: () => getSession(),
+  });
+```
+
+- Keys are tuples, `as const`, exported next to the options.
+- Do not set `staleTime` on a random query. The default lives in `router.tsx`. Override only when the data is more volatile than that default.
+- Guards: `queryClient.fetchQuery(options)` so multiple `beforeLoad`s share one in-flight request.
+- Signed-in UI: `useSuspenseQuery` after the guard has warmed the cache (`useUser`).
+- After login/create: `invalidateQueries`. After logout: `removeQueries` then `queryClient.clear()`.
+- Do not `setQueryData` with a client-invented object. Refetch from the source of truth (cookie or tRPC).
