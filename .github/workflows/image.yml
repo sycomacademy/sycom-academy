@@ -1,0 +1,34 @@
+# Prove the production Dockerfile still builds. Nothing is pushed to ACR and
+# production is not touched — OIDC is scoped to main, so a pull request cannot
+# authenticate to Azure anyway. See infra/README.md.
+name: Image
+
+on:
+  pull_request:
+
+concurrency:
+  group: image-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: container image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Same file and context as deploy.yml. push: false means the image is
+      # discarded on the runner; this job only has to fail if the Dockerfile
+      # does. No GitHub Actions layer cache — same reason as deploy.yml.
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/dashboard/Dockerfile
+          push: false
