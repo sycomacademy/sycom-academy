@@ -1,14 +1,15 @@
 import type { AppRouter } from "@sycom-learn/api/routers/index";
 import { AnchoredToastProvider, ToastProvider } from "@sycom-learn/ui/components/toast";
+import { TooltipProvider } from "@sycom-learn/ui/components/tooltip";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
-
-import Header from "../components/header";
+import { ThemeProvider } from "next-themes";
 
 import appCss from "../index.css?url";
+
 export interface RouterAppContext {
   trpc: TRPCOptionsProxy<AppRouter>;
   queryClient: QueryClient;
@@ -25,7 +26,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "My App",
+        title: "Sycom",
       },
     ],
     links: [
@@ -41,21 +42,27 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        <ToastProvider>
-          <AnchoredToastProvider>
-            <div className="grid h-svh grid-rows-[auto_1fr]">
-              <Header />
-              <Outlet />
-            </div>
-            <TanStackRouterDevtools position="bottom-left" />
-            <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
-          </AnchoredToastProvider>
-        </ToastProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          disableTransitionOnChange
+          enableSystem
+        >
+          <TooltipProvider>
+            <ToastProvider>
+              <AnchoredToastProvider>
+                <Outlet />
+                <TanStackRouterDevtools position="bottom-left" />
+                <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+              </AnchoredToastProvider>
+            </ToastProvider>
+          </TooltipProvider>
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>
