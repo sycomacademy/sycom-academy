@@ -34,6 +34,24 @@ param betterAuthSecret string
 @description('Object id of the human or CI principal that should be able to read Key Vault secrets. Leave empty to skip.')
 param principalId string = ''
 
+@description('UPN of the developer who administers the database through Entra ID. Must match exactly; it is the username you connect with.')
+param developerPrincipalName string = ''
+
+@description('GitHub repository allowed to deploy, in owner/repo form.')
+param githubRepository string = 'sycomacademy/sycom-academy'
+
+@description('Branch allowed to deploy. Only workflows on this ref can obtain a token.')
+param githubBranch string = 'main'
+
+@description('Image the container app and migration job run. Empty on a first provision; otherwise the image currently deployed, so provisioning never rolls the app back to the placeholder. CI and azd both supply this.')
+param containerImageName string = ''
+
+@description('Deploy the Tailscale subnet router that gives developer tooling access to the private database. Off until the tailscale-authkey and access-vm-admin-password secrets exist in Key Vault, because the template reads both with getSecret() and the deployment fails if either is missing. See infra/README.md.')
+param deployAccessVm bool = false
+
+@description('Address that receives the access VM auto-shutdown warning. Empty to skip notification.')
+param accessVmShutdownNotificationEmail string = ''
+
 var serviceName = 'dashboard'
 var databaseName = 'sycom'
 var alphanumericPrefix = replace(resourcePrefix, '-', '')
@@ -79,6 +97,9 @@ module postgres './modules/postgres.bicep' = {
     databaseName: databaseName
     administratorLogin: postgresAdminLogin
     administratorPassword: postgresAdminPassword
+    entraAdminObjectId: principalId
+    entraAdminPrincipalName: developerPrincipalName
+    entraAdminPrincipalType: 'User'
     location: location
     tags: tags
   }
@@ -123,9 +144,10 @@ module containerAppsEnvironment './modules/container-apps-env.bicep' = {
   }
 }
 
-// Phase 1: the app is created with a public placeholder image and no registries
-// block. azd deploy links the registry to the system-assigned identity and swaps
-// in the real image once it has been pushed.
+// First provision only: the app starts on a public placeholder with no registry,
+// because its identity cannot hold AcrPull until it exists. After that both the
+// image and the registry link are declared here, so provisioning infrastructure
+// leaves the running revision alone.
 module dashboard './modules/container-app.bicep' = {
   name: 'dashboard'
   params: {
@@ -136,6 +158,8 @@ module dashboard './modules/container-app.bicep' = {
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     databaseUrl: databaseUrl
     betterAuthSecret: betterAuthSecret
+    containerImageName: containerImageName
+    containerRegistryServer: containerRegistry.outputs.loginServer
     location: location
     tags: tags
   }
@@ -147,6 +171,40 @@ module migrationJob './modules/migration-job.bicep' = {
     name: '${resourcePrefix}-migrate'
     containerAppsEnvironmentId: containerAppsEnvironment.outputs.id
     databaseUrl: databaseUrl
+    containerImageName: containerImageName
+    containerRegistryServer: containerRegistry.outputs.loginServer
+    location: location
+    tags: tags
+  }
+}
+
+module githubIdentity './modules/github-identity.bicep' = {
+  name: 'githubIdentity'
+  params: {
+    name: '${resourcePrefix}-github-mi'
+    repository: githubRepository
+    branch: githubBranch
+    location: location
+    tags: tags
+  }
+}
+
+// Both VM secrets are seeded by hand with `az keyvault secret set` and read here,
+// so neither appears in this template or in a committed parameter file. See
+// infra/README.md for the two commands.
+resource existingKeyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: keyVault.outputs.name
+}
+
+module accessVm './modules/access-vm.bicep' = if (deployAccessVm) {
+  name: 'accessVm'
+  params: {
+    name: '${resourcePrefix}-access'
+    subnetId: network.outputs.managementSubnetId
+    advertisedRoutes: network.outputs.addressPrefix
+    tailscaleAuthKey: existingKeyVault.getSecret('tailscale-authkey')
+    adminPassword: existingKeyVault.getSecret('access-vm-admin-password')
+    autoShutdownNotificationEmail: accessVmShutdownNotificationEmail
     location: location
     tags: tags
   }
@@ -179,6 +237,16 @@ module keyVaultSecretsRole './modules/key-vault-role.bicep' = {
   }
 }
 
+module githubRoles './modules/github-roles.bicep' = {
+  name: 'githubRoles'
+  params: {
+    registryName: containerRegistry.outputs.name
+    containerAppName: dashboard.outputs.name
+    migrationJobName: migrationJob.outputs.name
+    principalId: githubIdentity.outputs.principalId
+  }
+}
+
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = subscription().tenantId
 output AZURE_RESOURCE_GROUP string = resourceGroup().name
@@ -197,6 +265,9 @@ output POSTGRES_ADMIN_LOGIN string = postgresAdminLogin
 
 output AZURE_VNET_NAME string = network.outputs.vnetName
 output MIGRATION_JOB_NAME string = migrationJob.outputs.name
+
+output GITHUB_IDENTITY_CLIENT_ID string = githubIdentity.outputs.clientId
+output GITHUB_IDENTITY_NAME string = githubIdentity.outputs.name
 
 output SERVICE_DASHBOARD_NAME string = dashboard.outputs.name
 output SERVICE_DASHBOARD_URI string = dashboard.outputs.uri

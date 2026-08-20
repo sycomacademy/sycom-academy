@@ -22,6 +22,21 @@
     },
     "betterAuthSecret": {
       "value": "${BETTER_AUTH_SECRET}"
+    },
+    "developerPrincipalName": {
+      "value": "${AZURE_PRINCIPAL_NAME=}"
+    },
+    "githubRepository": {
+      "value": "${GITHUB_REPOSITORY=sycomacademy/sycom-academy}"
+    },
+    "githubBranch": {
+      "value": "${GITHUB_BRANCH=main}"
+    },
+    "accessVmShutdownNotificationEmail": {
+      "value": "${ACCESS_VM_SHUTDOWN_EMAIL=}"
+    },
+    "containerImageName": {
+      "value": "${SERVICE_DASHBOARD_IMAGE_NAME=}"
     }
   }
 }

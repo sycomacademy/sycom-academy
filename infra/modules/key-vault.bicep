@@ -26,6 +26,10 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     // RBAC rather than access policies, so grants are auditable alongside every
     // other role assignment.
     enableRbacAuthorization: true
+    // Required for the access VM's Tailscale auth key and local password to be
+    // read into the template with getSecret(), instead of being passed in as
+    // deployment parameters that would end up in shell history.
+    enabledForTemplateDeployment: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 90
     enablePurgeProtection: true

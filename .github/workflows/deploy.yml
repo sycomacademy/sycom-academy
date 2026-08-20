@@ -1,0 +1,107 @@
+# Build the image, push it to ACR, roll the container app onto it, then run
+# migrations from inside the VNet.
+#
+# Authentication is OIDC against a user-assigned managed identity — there is no
+# client secret in this repository. Infrastructure is not touched here: Bicep
+# changes are applied with `azd provision` from a laptop. See infra/README.md.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - ".azure/**"
+      - ".vscode/**"
+  workflow_dispatch:
+
+concurrency:
+  # Never let two deploys race for the same revision.
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_RESOURCE_GROUP: sycomlearn-prod-rg
+  REGISTRY_NAME: sycomacademyacr01
+  IMAGE_REPOSITORY: sycom-learn/dashboard
+  SERVICE_DASHBOARD_NAME: sycomacademy-app
+  MIGRATION_JOB_NAME: sycomacademy-migrate
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # The containerapp commands live in an extension. Install it explicitly
+      # rather than relying on dynamic install, which prompts and fails in CI.
+      - name: Install the containerapp extension
+        run: az extension add --name containerapp --yes --upgrade
+
+      - name: Sign in to the registry
+        run: az acr login --name "$REGISTRY_NAME"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built here rather than by ACR Tasks: the runner is already amd64, so no
+      # cross-build is needed, and the classic builder ACR Tasks uses cannot cache
+      # layers between runs.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/dashboard/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+            ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The immutable sha tag, not :latest, so a rollback is a single command
+      # against a tag that cannot have moved.
+      - name: Roll the container app onto the new image
+        run: |
+          az containerapp update \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$SERVICE_DASHBOARD_NAME" \
+            --image "${REGISTRY_NAME}.azurecr.io/${IMAGE_REPOSITORY}:${GITHUB_SHA}" \
+            --output none
+
+      # Reuses the script azd already runs, so local and CI deploys apply
+      # migrations exactly the same way. Postgres has no public endpoint, so this
+      # has to happen from a job inside the VNet.
+      - name: Run migrations
+        run: ./scripts/postdeploy.sh
+
+      - name: Smoke check
+        run: |
+          FQDN=$(az containerapp show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$SERVICE_DASHBOARD_NAME" \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          echo "checking https://${FQDN}/"
+          for attempt in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "https://${FQDN}/" || echo 000)
+            if [ "$STATUS" = "200" ]; then
+              echo "deploy: healthy"
+              exit 0
+            fi
+            echo "attempt ${attempt}: status ${STATUS}, retrying"
+            sleep 15
+          done
+          echo "deploy: app did not return 200 after the new revision went live" >&2
+          exit 1

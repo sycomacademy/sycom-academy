@@ -9,6 +9,20 @@ param administratorLogin string
 @secure()
 param administratorPassword string
 
+@description('Object id of the Entra principal that administers the database. Empty to skip.')
+param entraAdminObjectId string = ''
+
+@description('Display name or UPN of the Entra administrator. Must match exactly; it is the username you connect with.')
+param entraAdminPrincipalName string = ''
+
+@description('Kind of Entra principal: User, Group or ServicePrincipal.')
+@allowed([
+  'User'
+  'Group'
+  'ServicePrincipal'
+])
+param entraAdminPrincipalType string = 'User'
+
 param location string
 param tags object
 
@@ -60,6 +74,23 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-0
     charset: 'UTF8'
     collation: 'en_US.utf8'
   }
+}
+
+// Declared here rather than created with `az postgres flexible-server ad-admin`,
+// so it is idempotent and cannot drift. This is the human path into the database:
+// connect with this principal's UPN as the username and an Entra access token as
+// the password. The local admin account stays for break-glass only.
+resource entraAdmin 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = if (!empty(entraAdminObjectId)) {
+  parent: server
+  name: entraAdminObjectId
+  properties: {
+    principalName: entraAdminPrincipalName
+    principalType: entraAdminPrincipalType
+    tenantId: subscription().tenantId
+  }
+  dependsOn: [
+    database
+  ]
 }
 
 // No firewall rules by design: public access is disabled entirely, so there is

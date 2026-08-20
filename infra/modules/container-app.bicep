@@ -17,8 +17,11 @@ param databaseUrl string
 @secure()
 param betterAuthSecret string
 
-@description('Image to run. Defaults to a public placeholder so the app can be provisioned before anything is pushed to ACR; azd deploy replaces it.')
-param containerImageName string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+@description('Image to run. Empty on a first provision, before anything has been pushed to ACR. Otherwise the image currently deployed, so that provisioning infrastructure never rolls the app back to the placeholder.')
+param containerImageName string = ''
+
+@description('Registry the image is pulled from, e.g. myregistry.azurecr.io. Only wired up once a real image exists.')
+param containerRegistryServer string = ''
 
 @description('Port the container listens on. Matches PORT in apps/dashboard/Dockerfile.')
 param targetPort int = 3001
@@ -29,6 +32,11 @@ param tags object
 // Better Auth uses this as both baseURL and its trusted origin, so it has to be
 // the exact public origin. The FQDN is derivable before the app is created.
 var appUri = 'https://${name}.${containerAppsEnvironmentDefaultDomain}'
+
+// A public placeholder lets the app be created before any image has been pushed.
+var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+var isPlaceholder = empty(containerImageName) || contains(containerImageName, 'azuredocs/containerapps-helloworld')
+var image = isPlaceholder ? placeholderImage : containerImageName
 
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
@@ -54,9 +62,17 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           }
         ]
       }
-      // No registries block: azd deploy runs the equivalent of
-      // `az containerapp registry set --identity system` once the AcrPull grant
-      // exists, which avoids a circular dependency in this template.
+      // Empty on the very first provision: the app's system identity cannot hold
+      // AcrPull until the app exists, so declaring the registry then would
+      // deadlock. On every run after that the app and its grant already exist, so
+      // declaring it here keeps `azd provision` from unlinking the registry and
+      // stranding the running revision.
+      registries: isPlaceholder || empty(containerRegistryServer) ? [] : [
+        {
+          server: containerRegistryServer
+          identity: 'system'
+        }
+      ]
       secrets: [
         {
           name: 'database-url'
@@ -72,7 +88,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: serviceName
-          image: containerImageName
+          image: image
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
