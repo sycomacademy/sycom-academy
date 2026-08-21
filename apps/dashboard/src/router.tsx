@@ -6,7 +6,9 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { toastManager } from "@sycom-learn/ui/components/toast";
 
-import Loader from "./components/loader";
+import { RouteError } from "./components/global/error";
+import Loader from "./components/global/loader";
+import { NotFound } from "./components/global/not-found";
 import { routeTree } from "./routeTree.gen";
 import { TRPCProvider } from "./lib/trpc/trpc";
 
@@ -57,8 +59,9 @@ export const getRouter = () => {
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
     context: { trpc, queryClient },
-    defaultPendingComponent: () => <Loader />,
-    defaultNotFoundComponent: () => <div>Not Found</div>,
+    defaultPendingComponent: Loader,
+    defaultNotFoundComponent: NotFound,
+    defaultErrorComponent: RouteError,
     Wrap: ({ children }) => (
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
         {children}

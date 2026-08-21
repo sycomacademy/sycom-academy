@@ -36,7 +36,10 @@ export const Route = createFileRoute("/_auth/sign-in")({
   head: () => ({
     meta: [
       { title: "Sign In | Sycom" },
-      { name: "description", content: "Sign in to your Sycom account." },
+      {
+        name: "description",
+        content: "Sign in to your Sycom account to reach your courses, progress, and certificates.",
+      },
     ],
   }),
   component: SignInPage,
