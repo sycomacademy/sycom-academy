@@ -91,3 +91,11 @@ export const faq = [
       "Refund eligibility depends on course policy and purchase date. Contact support with your order details.",
   },
 ];
+
+export const marketingLinks = {
+  website: "https://sycomsolutions.com/",
+  careers: "https://sycomsolutions.com/careers",
+  academy: "https://sycom.academy",
+  terms: "https://sycomsolutions.com/terms",
+  privacy: "https://sycomsolutions.com/privacy",
+};

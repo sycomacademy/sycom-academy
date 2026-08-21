@@ -1,8 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@sycom-learn/ui/components/button";
 import { buttonVariants } from "@sycom-learn/ui/components/button-variants";
-import { Field, FieldError, FieldLabel } from "@sycom-learn/ui/components/field";
-import { Form, FormControl, FormField, FormItem } from "@sycom-learn/ui/components/form";
+import { Field, FieldLabel } from "@sycom-learn/ui/components/field";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormFieldError,
+  FormItem,
+} from "@sycom-learn/ui/components/form";
 import { Input } from "@sycom-learn/ui/components/input";
 import {
   InputGroup,
@@ -11,6 +17,7 @@ import {
   InputGroupInput,
 } from "@sycom-learn/ui/components/input-group";
 import { toastManager } from "@sycom-learn/ui/components/toast";
+import { marketingLinks } from "@sycom-learn/ui/lib/constants";
 import { cn } from "@sycom-learn/ui/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
@@ -23,8 +30,16 @@ import { authClient } from "@/lib/auth/auth-client";
 import { SESSION_QUERY_KEY } from "@/lib/auth/session";
 
 const signUpSchema = z.object({
-  firstName: z.string().min(3, "First name must be at least 3 characters"),
-  lastName: z.string().min(3, "Last name must be at least 3 characters"),
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "Enter a first name")
+    .max(80, "First name must be 80 characters or fewer"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Enter a last name")
+    .max(80, "Last name must be 80 characters or fewer"),
   email: z.email({ error: "Invalid email address" }),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
@@ -93,12 +108,12 @@ function SignUpPage() {
 
           <Form {...form} className="flex w-full flex-col gap-4">
             <form className="contents" onSubmit={form.handleSubmit(onSubmit)}>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="firstName"
                   render={({ field, fieldState }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <Field>
                         <FieldLabel className="text-xs text-muted-foreground">
                           First name
@@ -106,7 +121,7 @@ function SignUpPage() {
                         <FormControl>
                           <Input autoComplete="given-name" placeholder="Ada" {...field} />
                         </FormControl>
-                        <FieldError reserveSpace>{fieldState.error?.message}</FieldError>
+                        <FormFieldError reserveSpace>{fieldState.error?.message}</FormFieldError>
                       </Field>
                     </FormItem>
                   )}
@@ -116,13 +131,13 @@ function SignUpPage() {
                   control={form.control}
                   name="lastName"
                   render={({ field, fieldState }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <Field>
                         <FieldLabel className="text-xs text-muted-foreground">Last name</FieldLabel>
                         <FormControl>
                           <Input autoComplete="family-name" placeholder="Lovelace" {...field} />
                         </FormControl>
-                        <FieldError reserveSpace>{fieldState.error?.message}</FieldError>
+                        <FormFieldError reserveSpace>{fieldState.error?.message}</FormFieldError>
                       </Field>
                     </FormItem>
                   )}
@@ -146,7 +161,7 @@ function SignUpPage() {
                           {...field}
                         />
                       </FormControl>
-                      <FieldError reserveSpace>{fieldState.error?.message}</FieldError>
+                      <FormFieldError reserveSpace>{fieldState.error?.message}</FormFieldError>
                     </Field>
                   </FormItem>
                 )}
@@ -159,35 +174,35 @@ function SignUpPage() {
                   <FormItem>
                     <Field>
                       <FieldLabel className="text-xs text-muted-foreground">Password</FieldLabel>
-                      <FormControl>
-                        <InputGroup>
+                      <InputGroup>
+                        <FormControl>
                           <InputGroupInput
                             autoComplete="new-password"
                             placeholder="Min. 8 characters"
                             type={showPassword ? "text" : "password"}
                             {...field}
                           />
-                          <InputGroupAddon align="inline-end">
-                            <InputGroupButton
-                              aria-label={showPassword ? "Hide password" : "Show password"}
-                              onClick={() => setShowPassword((s) => !s)}
-                            >
-                              {showPassword ? (
-                                <EyeOffIcon className="size-3.5" />
-                              ) : (
-                                <EyeIcon className="size-3.5" />
-                              )}
-                            </InputGroupButton>
-                          </InputGroupAddon>
-                        </InputGroup>
-                      </FormControl>
-                      <FieldError reserveSpace>
+                        </FormControl>
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            onClick={() => setShowPassword((s) => !s)}
+                          >
+                            {showPassword ? (
+                              <EyeOffIcon className="size-3.5" />
+                            ) : (
+                              <EyeIcon className="size-3.5" />
+                            )}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                      </InputGroup>
+                      <FormFieldError reserveSpace>
                         {fieldState.error?.message ?? (
-                          <span className="text-muted-foreground/70">
+                          <span className="text-muted-foreground">
                             Tip: mix uppercase, lowercase, and a number for a stronger password.
                           </span>
                         )}
-                      </FieldError>
+                      </FormFieldError>
                     </Field>
                   </FormItem>
                 )}
@@ -213,14 +228,16 @@ function SignUpPage() {
         </div>
       </div>
       <div className="mt-auto pt-6 text-center">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground wrap-break-word">
           By creating an account, you agree to our{" "}
           <a
             className={cn(
               buttonVariants({ variant: "link" }),
               "px-0 text-muted-foreground transition-colors hover:text-foreground",
             )}
-            href={`/terms`}
+            href={marketingLinks.terms}
+            rel="noopener noreferrer"
+            target="_blank"
           >
             Terms of Service
           </a>{" "}
@@ -230,7 +247,9 @@ function SignUpPage() {
               buttonVariants({ variant: "link" }),
               "px-0 text-muted-foreground transition-colors hover:text-foreground",
             )}
-            href={`/privacy`}
+            href={marketingLinks.privacy}
+            rel="noopener noreferrer"
+            target="_blank"
           >
             Privacy Policy
           </a>

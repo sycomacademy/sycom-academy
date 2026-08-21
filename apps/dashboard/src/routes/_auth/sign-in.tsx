@@ -2,8 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@sycom-learn/ui/components/button";
 import { buttonVariants } from "@sycom-learn/ui/components/button-variants";
 import { Checkbox } from "@sycom-learn/ui/components/checkbox";
-import { Field, FieldError, FieldLabel } from "@sycom-learn/ui/components/field";
-import { Form, FormControl, FormField, FormItem } from "@sycom-learn/ui/components/form";
+import { Field, FieldLabel } from "@sycom-learn/ui/components/field";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormFieldError,
+  FormItem,
+} from "@sycom-learn/ui/components/form";
 import { Input } from "@sycom-learn/ui/components/input";
 import {
   InputGroup,
@@ -12,6 +18,7 @@ import {
   InputGroupInput,
 } from "@sycom-learn/ui/components/input-group";
 import { toastManager } from "@sycom-learn/ui/components/toast";
+import { marketingLinks } from "@sycom-learn/ui/lib/constants";
 import { cn } from "@sycom-learn/ui/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useRouter, useSearch } from "@tanstack/react-router";
@@ -114,7 +121,7 @@ function SignInPage() {
                           {...field}
                         />
                       </FormControl>
-                      <FieldError reserveSpace>{fieldState.error?.message}</FieldError>
+                      <FormFieldError reserveSpace>{fieldState.error?.message}</FormFieldError>
                     </Field>
                   </FormItem>
                 )}
@@ -127,29 +134,29 @@ function SignInPage() {
                   <FormItem>
                     <Field>
                       <FieldLabel className="text-xs text-muted-foreground">Password</FieldLabel>
-                      <FormControl>
-                        <InputGroup>
+                      <InputGroup>
+                        <FormControl>
                           <InputGroupInput
                             autoComplete="current-password"
                             placeholder="Enter your password"
                             type={showPassword ? "text" : "password"}
                             {...field}
                           />
-                          <InputGroupAddon align="inline-end">
-                            <InputGroupButton
-                              aria-label={showPassword ? "Hide password" : "Show password"}
-                              onClick={() => setShowPassword((s) => !s)}
-                            >
-                              {showPassword ? (
-                                <EyeOffIcon className="size-3.5" />
-                              ) : (
-                                <EyeIcon className="size-3.5" />
-                              )}
-                            </InputGroupButton>
-                          </InputGroupAddon>
-                        </InputGroup>
-                      </FormControl>
-                      <FieldError reserveSpace>{fieldState.error?.message}</FieldError>
+                        </FormControl>
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            onClick={() => setShowPassword((s) => !s)}
+                          >
+                            {showPassword ? (
+                              <EyeOffIcon className="size-3.5" />
+                            ) : (
+                              <EyeIcon className="size-3.5" />
+                            )}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                      </InputGroup>
+                      <FormFieldError reserveSpace>{fieldState.error?.message}</FormFieldError>
                     </Field>
                   </FormItem>
                 )}
@@ -161,15 +168,12 @@ function SignInPage() {
                 render={({ field }) => (
                   <FormItem>
                     <Field orientation="horizontal">
-                      <Checkbox
-                        checked={field.value}
-                        id="rememberMe"
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                      />
-                      <FieldLabel
-                        className="text-xs font-normal text-muted-foreground"
-                        htmlFor="rememberMe"
-                      >
+                      <FieldLabel className="flex cursor-pointer items-center gap-2 text-xs font-normal text-muted-foreground">
+                        <Checkbox
+                          aria-label="Remember me"
+                          checked={field.value}
+                          onCheckedChange={(checked) => field.onChange(checked === true)}
+                        />
                         Remember me
                       </FieldLabel>
                     </Field>
@@ -197,14 +201,16 @@ function SignInPage() {
         </div>
       </div>
       <div className="mt-auto pt-6 text-center">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground wrap-break-word">
           By signing in, you agree to our{" "}
           <a
             className={cn(
               buttonVariants({ variant: "link" }),
               "px-0 text-muted-foreground transition-colors hover:text-foreground",
             )}
-            href={`/terms`}
+            href={marketingLinks.terms}
+            rel="noopener noreferrer"
+            target="_blank"
           >
             Terms of Service
           </a>{" "}
@@ -214,7 +220,9 @@ function SignInPage() {
               buttonVariants({ variant: "link" }),
               "px-0 text-muted-foreground transition-colors hover:text-foreground",
             )}
-            href={`/privacy`}
+            href={marketingLinks.privacy}
+            rel="noopener noreferrer"
+            target="_blank"
           >
             Privacy Policy
           </a>

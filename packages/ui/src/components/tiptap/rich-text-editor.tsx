@@ -10,7 +10,6 @@ import { FloatingToolbar } from "@sycom-learn/ui/components/tiptap/extensions/fl
 import { TableBubbleMenu } from "@sycom-learn/ui/components/tiptap/extensions/table-bubble-menu";
 import type { TiptapEditorUploadFn } from "@sycom-learn/ui/lib/tiptap-upload";
 import { cn } from "@sycom-learn/ui/lib/utils";
-import { content as demoHtmlContent } from "@sycom-learn/ui/lib/content";
 import type { FullPresetCheckAnswerFn } from "@sycom-learn/ui/components/tiptap/extensions/editor-preset-types";
 import type { Content, Editor, JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -161,7 +160,7 @@ export function RichTextEditor({
           ? "relative w-full overflow-hidden border bg-card"
           : isCompactChrome
             ? "relative w-full overflow-hidden border bg-card"
-            : "relative max-h-[calc(100dvh-6rem)] w-full overflow-hidden overflow-y-scroll border bg-card pb-[60px] sm:pb-0",
+            : "relative max-h-[calc(100dvh-6rem)] w-full overflow-hidden overflow-y-scroll border bg-card pb-15 sm:pb-0",
         className,
       )}
     >
@@ -188,12 +187,12 @@ export function RichTextEditor({
         editor={editor}
         className={cn(
           isLightweight
-            ? "min-h-[140px] w-full min-w-full cursor-text"
+            ? "min-h-35 w-full min-w-full cursor-text"
             : isLearn
               ? "min-h-0 w-full min-w-full cursor-text"
               : isEmbedded
-                ? "min-h-[210px] w-full min-w-full cursor-text"
-                : "min-h-[600px] w-full min-w-full cursor-text sm:p-6",
+                ? "min-h-52.5 w-full min-w-full cursor-text"
+                : "min-h-150 w-full min-w-full cursor-text sm:p-6",
           editorContentClassName,
         )}
       />
@@ -206,7 +205,7 @@ export function RichTextEditor({
 }
 
 export function RichTextEditorDemo({ className }: { className?: string }) {
-  return <RichTextEditor mode="full" content={demoHtmlContent} className={className} />;
+  return <RichTextEditor mode="full" className={className} />;
 }
 
 export type { FullPresetCheckAnswerFn } from "@sycom-learn/ui/components/tiptap/extensions/editor-preset-types";

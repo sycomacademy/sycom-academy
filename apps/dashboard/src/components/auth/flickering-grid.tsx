@@ -1,5 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
 
 import { cn } from "@sycom-learn/ui/lib/utils";
 
@@ -25,6 +26,7 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
   maxOpacity = 0.3,
   ...props
 }) => {
+  const shouldReduceMotion = useReducedMotion() === true;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isInViewRef = useRef(false);
@@ -121,7 +123,7 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
       return;
     }
 
-    let animationFrameId: number;
+    let animationFrameId = 0;
     let gridParams: ReturnType<typeof setupCanvas>;
 
     const updateCanvasSize = () => {
@@ -133,6 +135,31 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
 
     updateCanvasSize();
 
+    const paint = () => {
+      drawGrid(
+        ctx,
+        canvas.width,
+        canvas.height,
+        gridParams.cols,
+        gridParams.rows,
+        gridParams.squares,
+        gridParams.dpr,
+      );
+    };
+
+    paint();
+
+    if (shouldReduceMotion) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateCanvasSize();
+        paint();
+      });
+      resizeObserver.observe(container);
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }
+
     let lastTime = 0;
     const animate = (time: number) => {
       if (!isInViewRef.current) {
@@ -143,15 +170,7 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
       lastTime = time;
 
       updateSquares(gridParams.squares, deltaTime);
-      drawGrid(
-        ctx,
-        canvas.width,
-        canvas.height,
-        gridParams.cols,
-        gridParams.rows,
-        gridParams.squares,
-        gridParams.dpr,
-      );
+      paint();
       animationFrameId = requestAnimationFrame(animate);
     };
 
@@ -182,11 +201,12 @@ export const FlickeringGrid: React.FC<FlickeringGridProps> = ({
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
     };
-  }, [setupCanvas, updateSquares, drawGrid, width, height]);
+  }, [setupCanvas, updateSquares, drawGrid, width, height, shouldReduceMotion]);
 
   return (
     <div className={cn("h-full w-full", className)} ref={containerRef} {...props}>
       <canvas
+        aria-hidden="true"
         className="pointer-events-none"
         ref={canvasRef}
         style={{

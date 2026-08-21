@@ -24,17 +24,20 @@ export const Route = createFileRoute("/_auth")({
 function AuthLayout() {
   return (
     <div className="flex min-h-svh bg-background p-1">
-      <div className="relative hidden overflow-hidden bg-foreground lg:flex lg:w-1/2">
+      <aside
+        aria-label="Instructor voices"
+        className="relative hidden overflow-hidden bg-foreground lg:flex lg:w-1/2"
+      >
         <AuthLeftPanel />
-      </div>
+      </aside>
 
       <div className="flex w-full flex-col items-center justify-center p-8 lg:w-1/2 lg:p-12">
-        <div className="flex h-full w-full max-w-md flex-col">
+        <main className="flex h-full w-full max-w-md min-w-0 flex-col">
           <div className="mb-8 flex items-center lg:hidden">
-            <Link className="flex items-center gap-2" to="/sign-in">
+            <Link aria-label="Sycom Solutions home" className="flex items-center" to="/sign-in">
               <span className="flex size-12 items-center justify-center overflow-hidden rounded">
                 <Image
-                  alt="Sycom Solutions logo"
+                  alt=""
                   height={48}
                   layout="fixed"
                   loading="eager"
@@ -45,7 +48,7 @@ function AuthLayout() {
             </Link>
           </div>
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 
+import { FieldError } from "@sycom-learn/ui/components/field";
 import { cn } from "@sycom-learn/ui/lib/utils";
 
 function Form<
@@ -90,16 +91,34 @@ function useFormField() {
 }
 
 function FormControl({ children }: { children: React.ReactElement }) {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+  const { error, formItemId, formMessageId } = useFormField();
 
   const childProps = children.props as Record<string, unknown>;
 
   return React.cloneElement(children, {
     ...childProps,
     id: formItemId,
-    "aria-describedby": error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId,
-    "aria-invalid": !!error,
+    "aria-describedby": error ? formMessageId : undefined,
+    "aria-invalid": error ? true : undefined,
   } as never);
 }
 
-export { Form, FormField, FormItem, FormControl, useFormField };
+function FormFieldError({
+  className,
+  reserveSpace,
+  children,
+}: {
+  className?: string;
+  reserveSpace?: boolean;
+  children?: React.ReactNode;
+}) {
+  const { formMessageId } = useFormField();
+
+  return (
+    <FieldError className={className} id={formMessageId} reserveSpace={reserveSpace}>
+      {children}
+    </FieldError>
+  );
+}
+
+export { Form, FormField, FormItem, FormControl, FormFieldError, useFormField };
