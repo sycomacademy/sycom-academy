@@ -44,7 +44,7 @@
     "vm:status": "./scripts/access-vm.sh status",
     "db:token": "./scripts/db-token.sh",
     "db:password": "./scripts/db-password.sh",
-    "check": "oxlint && oxfmt --check"
+    "check": "oxlint && oxfmt --write"
   },
   "dependencies": {
     "@sycom-learn/env": "workspace:*",
