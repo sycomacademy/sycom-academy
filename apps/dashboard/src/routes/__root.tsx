@@ -3,10 +3,20 @@ import { AnchoredToastProvider, ToastProvider } from "@sycom-learn/ui/components
 import { TooltipProvider } from "@sycom-learn/ui/components/tooltip";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { ThemeProvider } from "next-themes";
+import type { ReactNode } from "react";
+
+import { RouteError } from "@/components/global/error";
+import { NotFound } from "@/components/global/not-found";
 
 import appCss from "../index.css?url";
 
@@ -52,10 +62,28 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     ],
   }),
 
-  component: RootDocument,
+  component: RootComponent,
+  errorComponent: RootError,
+  notFoundComponent: NotFound,
 });
 
-function RootDocument() {
+function RootComponent() {
+  return (
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
+  );
+}
+
+function RootError(props: ErrorComponentProps) {
+  return (
+    <RootDocument>
+      <RouteError {...props} />
+    </RootDocument>
+  );
+}
+
+function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -71,7 +99,7 @@ function RootDocument() {
           <TooltipProvider>
             <ToastProvider>
               <AnchoredToastProvider>
-                <Outlet />
+                {children}
                 <TanStackRouterDevtools position="bottom-left" />
                 <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
               </AnchoredToastProvider>

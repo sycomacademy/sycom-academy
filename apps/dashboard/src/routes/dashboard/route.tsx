@@ -1,7 +1,9 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import Loader from "@/components/loader";
+import { RouteError } from "@/components/global/error";
+import Loader from "@/components/global/loader";
+import { NotFound } from "@/components/global/not-found";
 import { sessionQueryOptions } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/dashboard")({
@@ -18,7 +20,9 @@ export const Route = createFileRoute("/dashboard")({
     }
   },
   component: DashboardLayout,
-  pendingComponent: Loader,
+  pendingComponent: () => <Loader className="min-h-svh" label="Loading workspace..." />,
+  errorComponent: RouteError,
+  notFoundComponent: NotFound,
 });
 
 function DashboardLayout() {
