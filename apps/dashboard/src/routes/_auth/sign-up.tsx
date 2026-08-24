@@ -228,7 +228,7 @@ function SignUpPage() {
         </div>
       </div>
       <div className="mt-auto pt-6 text-center">
-        <p className="text-xs text-muted-foreground wrap-break-word">
+        <p className="text-xs wrap-break-word text-muted-foreground">
           By creating an account, you agree to our{" "}
           <a
             className={cn(
