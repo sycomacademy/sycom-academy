@@ -30,9 +30,14 @@ infra
 # the remote build context packer cannot follow.
 .claude
 .agents
+.codex
 .cursor
 .github
 .vscode
+
+# Impeccable's local session state. Untracked, so CI never sees it, but a local
+# `docker build .` would otherwise copy it into the image.
+.impeccable
 
 # Secrets stay out of image layers; runtime env comes from compose env_file,
 # build-time public values come from compose build args
