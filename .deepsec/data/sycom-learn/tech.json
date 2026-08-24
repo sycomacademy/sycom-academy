@@ -1,0 +1,13 @@
+{
+  "tags": [
+    "bun",
+    "github-actions",
+    "node"
+  ],
+  "sentinels": [
+    "bun.lock",
+    "package.json"
+  ],
+  "detectedAt": "2026-08-22T22:24:50.907Z",
+  "rootPath": "/Users/asa/Desktop/Projects/sycom-learn"
+}

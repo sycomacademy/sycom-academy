@@ -1,3 +1,16 @@
 {
-  "extends": "@sycom-learn/config/tsconfig.base.json"
+  "extends": "@sycom-learn/config/tsconfig.base.json",
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".cursor",
+    ".claude",
+    ".agents",
+    ".codex",
+    ".deepsec",
+    ".github/skills",
+    ".github/agents",
+    ".github/hooks"
+  ]
 }

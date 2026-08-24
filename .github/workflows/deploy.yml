@@ -91,6 +91,8 @@ jobs:
       - name: Run migrations
         run: ./scripts/postdeploy.sh
 
+      # `/` always 307s guests to /sign-in. Follow that hop so a working
+      # auth gate is not reported as a failed deploy.
       - name: Smoke check
         run: |
           FQDN=$(az containerapp show \
@@ -100,7 +102,7 @@ jobs:
             --output tsv)
           echo "checking https://${FQDN}/"
           for attempt in $(seq 1 10); do
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "https://${FQDN}/" || echo 000)
+            STATUS=$(curl -sL --max-redirs 2 -o /dev/null -w '%{http_code}' "https://${FQDN}/" || echo 000)
             if [ "$STATUS" = "200" ]; then
               echo "deploy: healthy"
               exit 0

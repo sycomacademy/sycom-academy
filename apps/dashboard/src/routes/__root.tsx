@@ -100,8 +100,12 @@ function RootDocument({ children }: { children: ReactNode }) {
             <ToastProvider>
               <AnchoredToastProvider>
                 {children}
-                <TanStackRouterDevtools position="bottom-left" />
-                <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+                {import.meta.env.DEV ? (
+                  <>
+                    <TanStackRouterDevtools position="bottom-left" />
+                    <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+                  </>
+                ) : null}
               </AnchoredToastProvider>
             </ToastProvider>
           </TooltipProvider>
