@@ -13,11 +13,7 @@ export const adminPlugin = admin({
   defaultRole: "user",
 });
 
-export const customSyntheticUser: CustomSyntheticUser = ({
-  coreFields,
-  additionalFields,
-  id,
-}) => ({
+export const customSyntheticUser: CustomSyntheticUser = ({ coreFields, additionalFields, id }) => ({
   ...coreFields,
   role: "user",
   banned: false,

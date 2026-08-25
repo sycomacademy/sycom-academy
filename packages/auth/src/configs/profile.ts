@@ -22,10 +22,7 @@ function splitName(name: string) {
   };
 }
 
-export async function createProfile(
-  db: Database,
-  user: { id: string; name: string },
-) {
+export async function createProfile(db: Database, user: { id: string; name: string }) {
   try {
     await db.insert(profile).values({
       userId: user.id,

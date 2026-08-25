@@ -5,16 +5,6 @@ import { pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createdAt, updatedAt } from "../helpers";
 import { user } from "./auth";
 
-/**
- * Everything we want to know about a person that Better Auth does not own.
- *
- * One row per user, created by a `databaseHooks.user.create.after` hook so it
- * exists for both self sign-up and `admin.createUser`. Deliberately not part of
- * the schema handed to the Better Auth adapter: the plugin must never write here.
- *
- * Identity (`name`, `email`, `image`, `emailVerified`) and the platform role stay
- * on `user`. Nothing is duplicated across the two tables.
- */
 export const profile = pgTable(
   "profile",
   {
@@ -27,9 +17,7 @@ export const profile = pgTable(
     firstName: text("first_name"),
     lastName: text("last_name"),
     phone: text("phone"),
-    /** IANA zone, e.g. `Europe/London`. Used later for cohort schedules. */
     timezone: text("timezone"),
-    /** BCP 47 tag, e.g. `en-GB`. */
     locale: text("locale"),
     bio: text("bio"),
     onboardingCompletedAt: timestamp("onboarding_completed_at"),

@@ -1,5 +1,5 @@
 import { createDb } from "@sycom-learn/db";
-import * as schema from "@sycom-learn/db/schema/auth";
+import * as schema from "@sycom-learn/db/schema";
 import { env } from "@sycom-learn/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -45,12 +45,7 @@ export function createAuth() {
         },
       },
     },
-    plugins: [
-      adminPlugin,
-      organizationPlugin,
-      activityLog({ db }),
-      tanstackStartCookies(),
-    ],
+    plugins: [adminPlugin, organizationPlugin, activityLog({ db }), tanstackStartCookies()],
     ...logger,
   });
 }
