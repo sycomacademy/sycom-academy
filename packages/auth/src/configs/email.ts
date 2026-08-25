@@ -1,5 +1,14 @@
 import { createLoggerWithContext } from "@sycom-learn/logger";
-
+/**
+ * Stubs. There is no transport yet, so every message is logged instead of sent
+ * and the link is printed so it can be pasted into a browser during development.
+ *
+ * The link goes out under `link`, not `url`: the logger redacts `url` so that
+ * request logging never leaks query strings.
+ *
+ * Replace the bodies of these two functions when a provider lands; the auth
+ * config should not have to change.
+ */
 const log = createLoggerWithContext("auth:email");
 
 type AuthEmailUser = {

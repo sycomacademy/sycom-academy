@@ -25,6 +25,10 @@
       "cache": false,
       "interactive": true
     },
+    "auth:generate": {
+      "cache": false,
+      "interactive": true
+    },
     "db:migrate": {
       "cache": false,
       "interactive": true

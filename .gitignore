@@ -11,6 +11,7 @@ build
 # Generated files
 local.db
 local.db-*
+packages/db/generated/
 
 # Environment variables
 .env

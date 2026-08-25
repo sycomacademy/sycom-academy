@@ -2,8 +2,6 @@ import { orgAc, orgRoles, platformAc, platformRoles } from "@sycom-learn/auth/co
 import { adminClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
-// The same access controllers the server uses, so `checkRolePermission` can
-// answer without a round trip.
 export const authClient = createAuthClient({
   plugins: [
     adminClient({

@@ -10,7 +10,8 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "auth:generate": "bunx auth generate --config src/cli.ts --output ../db/generated/better-auth.ts --adapter drizzle --dialect postgresql --yes"
   },
   "dependencies": {
     "@sycom-learn/db": "workspace:*",
