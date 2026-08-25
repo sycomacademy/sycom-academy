@@ -12,6 +12,7 @@ export function createAuth() {
   const db = createDb();
 
   return betterAuth({
+    appName: "Sycom Academy",
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: schema,
@@ -22,6 +23,9 @@ export function createAuth() {
     },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
+    advanced: {
+      cookiePrefix: "sycom",
+    },
     plugins: [tanstackStartCookies()],
     logger: {
       level: env.DEBUG_PERFORMANCE ? "debug" : "info",
