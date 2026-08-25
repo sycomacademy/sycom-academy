@@ -15,6 +15,20 @@
       "when": 1787640398731,
       "tag": "0001_activity_log",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787674577302,
+      "tag": "0002_admin_plugin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787678688644,
+      "tag": "0003_romantic_chat",
+      "breakpoints": true
     }
   ]
 }

@@ -19,15 +19,13 @@ import {
 import { toastManager } from "@sycom-learn/ui/components/toast";
 import { marketingLinks } from "@sycom-learn/ui/lib/constants";
 import { cn } from "@sycom-learn/ui/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { EyeIcon, EyeOffIcon, MailCheckIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth/auth-client";
-import { SESSION_QUERY_KEY } from "@/lib/auth/session";
 
 const signUpSchema = z.object({
   firstName: z
@@ -60,10 +58,83 @@ export const Route = createFileRoute("/_auth/sign-up")({
   component: SignUpPage,
 });
 
+/**
+ * Sign-up never signs anyone in: `requireEmailVerification` means Better Auth
+ * returns no session until the link in the email is used. Sending people to
+ * `/dashboard` here would just bounce them back to `/sign-in`.
+ */
+function VerifyEmailNotice({ email }: { email: string }) {
+  const [isResending, setIsResending] = useState(false);
+
+  const onResend = async () => {
+    setIsResending(true);
+    try {
+      const { error } = await authClient.sendVerificationEmail({
+        email,
+        callbackURL: "/dashboard",
+      });
+
+      if (error) {
+        toastManager.add({ title: error.message, type: "error" });
+        return;
+      }
+
+      toastManager.add({ title: "Verification email sent", type: "success" });
+    } catch (error) {
+      toastManager.add({
+        title:
+          error instanceof Error
+            ? error.message
+            : "Couldn't reach server. Check your connection and try again.",
+        type: "error",
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center">
+      <div className="w-full space-y-6 text-center">
+        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
+          <MailCheckIcon aria-hidden className="size-5 text-muted-foreground" />
+        </span>
+
+        <div className="space-y-2">
+          <h1 className="text-lg font-medium tracking-tight">Check your email</h1>
+          <p className="text-sm wrap-break-word text-muted-foreground">
+            We sent a verification link to <span className="text-foreground">{email}</span>. Open it
+            to finish setting up your account.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <Button
+            className="w-full"
+            loading={isResending}
+            onClick={onResend}
+            size="lg"
+            type="button"
+            variant="outline"
+          >
+            Resend verification email
+          </Button>
+
+          <p className="text-sm text-muted-foreground">
+            Already verified?{" "}
+            <Link className={cn(buttonVariants({ variant: "link" }), "px-0")} to="/sign-in">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SignUpPage() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -76,6 +147,7 @@ function SignUpPage() {
         email: data.email,
         password: data.password,
         name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+        callbackURL: "/dashboard",
       });
 
       if (error) {
@@ -83,9 +155,8 @@ function SignUpPage() {
         return;
       }
 
-      toastManager.add({ title: "Account created", type: "success" });
-      await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-      await router.navigate({ to: "/dashboard", replace: true });
+      setPendingEmail(data.email);
+      toastManager.add({ title: "Verification email sent", type: "success" });
     } catch (error) {
       toastManager.add({
         title:
@@ -96,6 +167,10 @@ function SignUpPage() {
       });
     }
   };
+
+  if (pendingEmail) {
+    return <VerifyEmailNotice email={pendingEmail} />;
+  }
 
   return (
     <div className="flex h-full w-full flex-col">

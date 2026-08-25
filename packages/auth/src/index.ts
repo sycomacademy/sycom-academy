@@ -4,9 +4,12 @@ import { env } from "@sycom-learn/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { logger } from "./config";
+import { adminPlugin, customSyntheticUser } from "./configs/admin";
+import { sendResetPasswordEmail, sendVerificationEmail } from "./configs/email";
+import { logger } from "./configs/logger";
+import { organizationPlugin } from "./configs/organization";
+import { createProfile } from "./configs/profile";
 import { activityLog } from "./plugins/activity-log";
-import { admin } from "better-auth/plugins";
 
 export function createAuth() {
   const db = createDb();
@@ -22,14 +25,32 @@ export function createAuth() {
     baseURL: env.BETTER_AUTH_URL,
     emailAndPassword: {
       enabled: true,
+      requireEmailVerification: true,
+      customSyntheticUser,
+      sendResetPassword: ({ user, url }) => sendResetPasswordEmail(user, url),
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: ({ user, url }) => sendVerificationEmail(user, url),
     },
     advanced: {
       cookiePrefix: "sycom",
     },
-    // activityLog observes, so it goes last: plugin hooks run in array order and
-    // it must see the fully settled context (a plugin like twoFactor nulls
-    // `newSession` in its own after-hook while a challenge is pending).
-    plugins: [tanstackStartCookies(), admin(), activityLog({ db })],
+    databaseHooks: {
+      user: {
+        create: {
+          after: (user) => createProfile(db, user),
+        },
+      },
+    },
+    plugins: [
+      adminPlugin,
+      organizationPlugin,
+      activityLog({ db }),
+      tanstackStartCookies(),
+    ],
     ...logger,
   });
 }

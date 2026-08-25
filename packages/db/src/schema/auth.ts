@@ -9,6 +9,13 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
+  // admin plugin. Kept nullable to match the plugin's own field definitions
+  // (`required: false`), and `role` stays plain text rather than a pgEnum
+  // because Better Auth comma-joins multiple roles into the one column.
+  role: text("role"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
   createdAt,
   updatedAt,
 });
@@ -26,6 +33,14 @@ export const session = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // admin plugin: the admin's user id while impersonating. Deliberately not a
+    // foreign key — Better Auth treats it as an opaque string, and a cascade or
+    // `set null` here would erase who impersonated whom.
+    impersonatedBy: text("impersonated_by"),
+    // organization plugin. No foreign key: the plugin writes these directly and
+    // a cascade would delete live sessions when an org or cohort goes away.
+    activeOrganizationId: text("active_organization_id"),
+    activeTeamId: text("active_team_id"),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
 );

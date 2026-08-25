@@ -72,7 +72,15 @@ function SignInPage() {
       });
 
       if (error) {
-        toastManager.add({ title: error.message, type: "error" });
+        // `emailVerification.sendOnSignIn` has already sent a fresh link by the
+        // time this response comes back, so say so.
+        toastManager.add({
+          title:
+            error.code === "EMAIL_NOT_VERIFIED"
+              ? "Verify your email to continue. We just sent you a new link."
+              : error.message,
+          type: "error",
+        });
         return;
       }
 
