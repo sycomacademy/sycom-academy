@@ -1,49 +1,63 @@
-import { createDb } from "@sycom-learn/db";
-import * as schema from "@sycom-learn/db/schema/auth";
+import { db } from "@sycom-learn/db";
+import * as schema from "@sycom-learn/db/schema";
 import { env } from "@sycom-learn/env/server";
-import { createLoggerWithContext } from "@sycom-learn/logger";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-
-const authLogger = createLoggerWithContext("auth");
+import { adminPlugin, customSyntheticUser } from "./configs/admin";
+import { sendInvitationEmail, sendResetPasswordEmail, sendVerificationEmail } from "./configs/email";
+import { haveIBeenPwnedPlugin } from "./configs/have-i-been-pwned";
+import { lastLoginMethodPlugin } from "./configs/last-login-method";
+import { logger } from "./configs/logger";
+import { createOrganizationPlugin } from "./configs/organization";
+import { passkeyPlugin } from "./configs/passkey";
+import { twoFactorPlugin } from "./configs/two-factor";
+import { activityLog } from "./plugins/activity-log";
 
 export function createAuth() {
-  const db = createDb();
-
   return betterAuth({
+    appName: "Sycom Academy",
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: schema,
     }),
     trustedOrigins: [env.BETTER_AUTH_URL],
-    emailAndPassword: {
-      enabled: true,
-    },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
-    plugins: [tanstackStartCookies()],
-    logger: {
-      level: env.DEBUG_PERFORMANCE ? "debug" : "info",
-      log: (level, message, ...args) => {
-        const logMessage = `[better-auth:${level}] ${message}`;
-        const logData = args.length > 0 ? { args } : undefined;
-
-        if (level === "debug") {
-          authLogger.debug(logMessage, logData);
-          return;
-        }
-        if (level === "info") {
-          authLogger.info(logMessage, logData);
-          return;
-        }
-        if (level === "warn") {
-          authLogger.warn(logMessage, logData);
-          return;
-        }
-        authLogger.error(logMessage, logData);
-      },
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      customSyntheticUser,
+      sendResetPassword: ({ user, url }) => sendResetPasswordEmail(user, url),
     },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: ({ user, url }) => sendVerificationEmail(user, url),
+    },
+    advanced: {
+      cookiePrefix: "sycom",
+    },
+    plugins: [
+      adminPlugin,
+      createOrganizationPlugin({
+        sendInvitationEmail: (data) =>
+          sendInvitationEmail({
+            to: data.email,
+            inviteUrl: `${env.BETTER_AUTH_URL}/accept-invitation/${data.id}`,
+            organizationName: data.organization.name,
+            role: data.role,
+          }),
+      }),
+      twoFactorPlugin,
+      passkeyPlugin,
+      haveIBeenPwnedPlugin,
+      lastLoginMethodPlugin,
+      activityLog({ db }),
+      tanstackStartCookies(),
+    ],
+    ...logger,
   });
 }
 

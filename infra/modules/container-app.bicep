@@ -17,6 +17,15 @@ param databaseUrl string
 @secure()
 param betterAuthSecret string
 
+@description('Azure Communication Services endpoint the app sends transactional email through.')
+param communicationEndpoint string
+
+@secure()
+param communicationAccessKey string
+
+@description('Envelope sender for every transactional email. On the Azure-managed domain this is DoNotReply@<guid>.azurecomm.net.')
+param emailFrom string
+
 @description('Image to run. Empty on a first provision, before anything has been pushed to ACR. Otherwise the image currently deployed, so that provisioning infrastructure never rolls the app back to the placeholder.')
 param containerImageName string = ''
 
@@ -82,6 +91,10 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'better-auth-secret'
           value: betterAuthSecret
         }
+        {
+          name: 'communication-access-key'
+          value: communicationAccessKey
+        }
       ]
     }
     template: {
@@ -129,6 +142,18 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'BETTER_AUTH_SECRET'
               secretRef: 'better-auth-secret'
+            }
+            {
+              name: 'AZURE_COMMUNICATION_ENDPOINT'
+              value: communicationEndpoint
+            }
+            {
+              name: 'EMAIL_FROM'
+              value: emailFrom
+            }
+            {
+              name: 'AZURE_COMMUNICATION_ACCESS_KEY'
+              secretRef: 'communication-access-key'
             }
           ]
         }

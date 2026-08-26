@@ -13,6 +13,9 @@ param postgresAdminPassword string
 @secure()
 param betterAuthSecret string
 
+@secure()
+param communicationAccessKey string
+
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: name
   location: location
@@ -66,6 +69,15 @@ resource betterAuthSecretEntry 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = 
   name: 'better-auth-secret'
   properties: {
     value: betterAuthSecret
+    contentType: 'text/plain'
+  }
+}
+
+resource communicationAccessKeyEntry 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: vault
+  name: 'communication-access-key'
+  properties: {
+    value: communicationAccessKey
     contentType: 'text/plain'
   }
 }

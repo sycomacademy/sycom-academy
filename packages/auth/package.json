@@ -10,10 +10,13 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "auth:generate": "bunx auth generate --config src/cli.ts --output ../db/generated/better-auth.ts --adapter drizzle --dialect postgresql --yes"
   },
   "dependencies": {
+    "@better-auth/passkey": "catalog:",
     "@sycom-learn/db": "workspace:*",
+    "@sycom-learn/email": "workspace:*",
     "@sycom-learn/env": "workspace:*",
     "@sycom-learn/logger": "workspace:*",
     "better-auth": "catalog:",

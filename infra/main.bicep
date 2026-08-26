@@ -59,6 +59,7 @@ param accessVmShutdownNotificationEmail string = ''
 var serviceName = 'dashboard'
 var databaseName = 'sycom'
 var alphanumericPrefix = replace(resourcePrefix, '-', '')
+var communicationServiceName = '${resourcePrefix}-acs'
 
 var tags = {
   'azd-env-name': environmentName
@@ -125,6 +126,29 @@ module postgresPrivateEndpoint './modules/postgres-private-endpoint.bicep' = {
 // zone resolves it to the private endpoint instead.
 var databaseUrl = 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgres.outputs.fullyQualifiedDomainName}:5432/${databaseName}?sslmode=require'
 
+module email './modules/email.bicep' = {
+  name: 'email'
+  params: {
+    name: '${resourcePrefix}-email'
+    communicationServiceName: communicationServiceName
+    tags: tags
+  }
+}
+
+// The access key is read here rather than returned from the email module: Bicep
+// has no secure outputs, so a module that emitted it would write a live
+// credential into the deployment history. Same shape as existingKeyVault below.
+//
+// The name has to be the literal expression rather than email.outputs.*, because
+// listKeys() on an existing resource is resolved before any module has run. That
+// also means the ordering is not inferred, so every consumer below carries an
+// explicit dependsOn: [email].
+resource existingCommunicationService 'Microsoft.Communication/communicationServices@2023-04-01' existing = {
+  name: communicationServiceName
+}
+
+var communicationAccessKey = existingCommunicationService.listKeys().primaryKey
+
 module keyVault './modules/key-vault.bicep' = {
   name: 'keyVault'
   params: {
@@ -134,7 +158,13 @@ module keyVault './modules/key-vault.bicep' = {
     databaseUrl: databaseUrl
     postgresAdminPassword: postgresAdminPassword
     betterAuthSecret: betterAuthSecret
+    communicationAccessKey: communicationAccessKey
   }
+  // Nothing here reads an email output, so the ordering that listKeys() needs is
+  // not inferred.
+  dependsOn: [
+    email
+  ]
 }
 
 module containerAppsEnvironment './modules/container-apps-env.bicep' = {
@@ -162,6 +192,9 @@ module dashboard './modules/container-app.bicep' = {
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     databaseUrl: databaseUrl
     betterAuthSecret: betterAuthSecret
+    communicationEndpoint: email.outputs.endpoint
+    communicationAccessKey: communicationAccessKey
+    emailFrom: email.outputs.senderAddress
     containerImageName: containerImageName
     containerRegistryServer: containerRegistry.outputs.loginServer
     location: location
@@ -260,6 +293,10 @@ output AZURE_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 output AZURE_CONTAINER_APPS_ENVIRONMENT_NAME string = containerAppsEnvironment.outputs.name
+
+output AZURE_COMMUNICATION_SERVICE_NAME string = email.outputs.communicationServiceName
+output AZURE_COMMUNICATION_ENDPOINT string = email.outputs.endpoint
+output EMAIL_FROM string = email.outputs.senderAddress
 
 output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri

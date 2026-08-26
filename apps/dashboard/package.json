@@ -9,6 +9,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/passkey": "catalog:",
     "@hookform/resolvers": "catalog:",
     "@sycom-learn/api": "workspace:*",
     "@sycom-learn/auth": "workspace:*",

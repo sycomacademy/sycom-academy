@@ -39,6 +39,9 @@ the data migration.
 | PostgreSQL Flexible Server   | `sycomacademy-postgres`                   | PG 18, `Standard_B1ms`, **no public endpoint**                                |
 | Private endpoint             | `sycomacademy-postgres-pe`                | `10.20.2.4`, registered in `privatelink.postgres.database.azure.com`          |
 | Key Vault                    | `sycomacademykv01`                        | RBAC, soft-delete 90 days, purge protection                                   |
+| Email Communication Service  | `sycomacademy-email`                      | Owns the sender domain. `global`, data at rest in the UK                      |
+| ↳ Sender domain              | `AzureManagedDomain`                      | Azure-managed, no DNS records, sends as `DoNotReply@<guid>.azurecomm.net`     |
+| Communication Services       | `sycomacademy-acs`                        | The endpoint and access keys the app sends transactional email with           |
 | CI identity                  | `sycomacademy-github-mi`                  | User-assigned, federated to GitHub Actions                                    |
 | Access VM                    | `sycomacademy-access`                     | Tailscale subnet router, no public IP. Deallocate with `bun run vm:down`.     |
 | Log Analytics / App Insights | `sycomacademy-logs` / `sycomacademy-appi` |                                                                               |
@@ -55,6 +58,34 @@ NAT Gateway an allowlist would have required.
 
 The consequence is the thing to remember: **`bun run db:migrate` from a laptop does
 not work.** The `sycomacademy-migrate` job replaces it and runs on every deploy.
+
+### Why the sender domain is Azure-managed
+
+Auth mail — verification, password reset, organization invitations — goes out over
+Azure Communication Services, provisioned in `modules/email.bicep` and reached
+through `packages/email`.
+
+The domain is `AzureManagedDomain`, which is a literal name and not a choice of
+label: it is what selects the free Azure-managed sender. It provisions with the
+rest of the stack and needs no DNS records, which is what makes email work on the
+first `azd provision`. What you give up is worth knowing:
+
+- the sender is `DoNotReply@<guid>.azurecomm.net` and cannot be branded
+- **100 emails/minute**, 30 recipients per message
+- the From address changes if the domain resource is ever recreated
+
+Moving to `academy.sycom.dev` means adding a second `domains` resource with
+`domainManagement: 'CustomerManaged'`, publishing the TXT/SPF/DKIM records it
+returns, running `az communication email domain initiate-verification` for each
+record type, and only then adding it to `linkedDomains` and pointing `EMAIL_FROM`
+at it. The managed domain can stay alongside it as a fallback.
+
+The access key is not a module output. Bicep has no secure outputs, so `main.bicep`
+re-declares the Communication Services resource as `existing` and reads
+`listKeys().primaryKey` itself — the same shape already used for the access VM's
+Key Vault secrets. That read resolves before any module runs, which is why the
+`existing` resource is named from the `communicationServiceName` variable rather
+than `email.outputs.*`, and why `keyVault` carries an explicit `dependsOn: [email]`.
 
 ### Why the registry is Basic, not Premium
 
