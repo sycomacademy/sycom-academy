@@ -5,11 +5,11 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { adminPlugin, customSyntheticUser } from "./configs/admin";
-import { sendResetPasswordEmail, sendVerificationEmail } from "./configs/email";
+import { sendInvitationEmail, sendResetPasswordEmail, sendVerificationEmail } from "./configs/email";
 import { haveIBeenPwnedPlugin } from "./configs/have-i-been-pwned";
 import { lastLoginMethodPlugin } from "./configs/last-login-method";
 import { logger } from "./configs/logger";
-import { organizationPlugin } from "./configs/organization";
+import { createOrganizationPlugin } from "./configs/organization";
 import { passkeyPlugin } from "./configs/passkey";
 import { twoFactorPlugin } from "./configs/two-factor";
 import { activityLog } from "./plugins/activity-log";
@@ -41,7 +41,15 @@ export function createAuth() {
     },
     plugins: [
       adminPlugin,
-      organizationPlugin,
+      createOrganizationPlugin({
+        sendInvitationEmail: (data) =>
+          sendInvitationEmail({
+            to: data.email,
+            inviteUrl: `${env.BETTER_AUTH_URL}/accept-invitation/${data.id}`,
+            organizationName: data.organization.name,
+            role: data.role,
+          }),
+      }),
       twoFactorPlugin,
       passkeyPlugin,
       haveIBeenPwnedPlugin,
