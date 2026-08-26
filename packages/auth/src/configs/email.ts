@@ -1,73 +1,13 @@
-import { createLoggerWithContext } from "@sycom-learn/logger";
 /**
- * Stubs. There is no transport yet, so every message is logged instead of sent
- * and the link is printed so it can be pasted into a browser during development.
+ * Auth emails live in `@sycom-learn/email`, which owns the transport (Azure
+ * Communication Services behind Email SDK) and the React Email templates.
  *
- * The link goes out under `link`, not `url`: the logger redacts `url` so that
- * request logging never leaks query strings.
- *
- * Replace the bodies of these two functions when a provider lands; the auth
- * config should not have to change.
+ * This file stays as the seam the auth config imports, so swapping providers
+ * never reaches into `packages/auth`.
  */
-const log = createLoggerWithContext("auth:email");
-
-type AuthEmailUser = {
-  email: string;
-  name?: string | null;
-};
-
-const sendAuthEmail = async ({
-  to,
-  subject,
-  label,
-  link,
-  meta,
-}: {
-  to: string;
-  subject: string;
-  label: string;
-  link: string;
-  meta?: Record<string, unknown>;
-}) => {
-  log.info(`${label} (stub, not sent)`, { to, subject, link, ...meta });
-};
-
-export async function sendResetPasswordEmail(user: AuthEmailUser, url: string) {
-  await sendAuthEmail({
-    to: user.email,
-    subject: "Reset your Sycom Academy password",
-    label: "password reset",
-    link: url,
-  });
-}
-
-export async function sendVerificationEmail(user: AuthEmailUser, url: string) {
-  await sendAuthEmail({
-    to: user.email,
-    subject: "Verify your email for Sycom Academy",
-    label: "email verification",
-    link: url,
-  });
-}
-
-export type SendInvitationEmailInput = {
-  to: string;
-  inviteUrl: string;
-  organizationName: string;
-  role: string;
-};
-
-export async function sendInvitationEmail({
-  to,
-  inviteUrl,
-  organizationName,
-  role,
-}: SendInvitationEmailInput) {
-  await sendAuthEmail({
-    to,
-    subject: `Invitation to join ${organizationName} on Sycom Academy`,
-    label: "org member invite",
-    link: inviteUrl,
-    meta: { organizationName, role },
-  });
-}
+export {
+  sendInvitationEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} from "@sycom-learn/email";
+export type { SendInvitationEmailInput } from "@sycom-learn/email";

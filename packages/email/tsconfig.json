@@ -1,0 +1,7 @@
+{
+  "extends": "@sycom-learn/config/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"]
+  }
+}

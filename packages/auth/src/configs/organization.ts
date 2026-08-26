@@ -1,3 +1,4 @@
+import { env } from "@sycom-learn/env/server";
 import { organization } from "better-auth/plugins/organization";
 
 import { sendInvitationEmail } from "./email";
@@ -21,7 +22,7 @@ export const organizationPlugin = organization({
   sendInvitationEmail: (data) =>
     sendInvitationEmail({
       to: data.email,
-      inviteUrl: `${process.env.BETTER_AUTH_URL}/accept-invitation/${data.id}`,
+      inviteUrl: `${env.BETTER_AUTH_URL}/accept-invitation/${data.id}`,
       organizationName: data.organization.name,
       role: data.role,
     }),

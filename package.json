@@ -23,7 +23,12 @@
       "@types/react": "^19.2.17",
       "@types/react-dom": "^19.2.3",
       "react-hook-form": "^7.75.0",
-      "@hookform/resolvers": "^5.2.2"
+      "@hookform/resolvers": "^5.2.2",
+      "@opencoredev/email-sdk": "^1.1.0",
+      "@react-email/components": "^1.0.12",
+      "@react-email/render": "^2.1.0",
+      "react-email": "^6.9.3",
+      "@react-email/ui": "^6.9.3"
     }
   },
   "type": "module",
@@ -34,6 +39,7 @@
     "dev:dashboard": "turbo run dev -F dashboard --",
     "db:push": "turbo run db:push -F @sycom-learn/db --",
     "db:studio": "turbo run db:studio -F @sycom-learn/db --",
+    "email:dev": "turbo run email:dev -F @sycom-learn/email --",
     "db:generate": "turbo run db:generate -F @sycom-learn/db --",
     "auth:generate": "turbo run auth:generate -F @sycom-learn/auth --",
     "db:migrate": "turbo run db:migrate -F @sycom-learn/db --",

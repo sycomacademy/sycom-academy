@@ -5,6 +5,10 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ESNext"],
+    // Set here rather than per-package: workspace packages are consumed as source,
+    // so any package importing one that ships .tsx (e.g. @sycom-learn/email) must
+    // be able to read JSX.
+    "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
     "strict": true,
     "skipLibCheck": true,

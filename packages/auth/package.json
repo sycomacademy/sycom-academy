@@ -16,6 +16,7 @@
   "dependencies": {
     "@better-auth/passkey": "catalog:",
     "@sycom-learn/db": "workspace:*",
+    "@sycom-learn/email": "workspace:*",
     "@sycom-learn/env": "workspace:*",
     "@sycom-learn/logger": "workspace:*",
     "better-auth": "catalog:",

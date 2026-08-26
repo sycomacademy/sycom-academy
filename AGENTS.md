@@ -26,6 +26,7 @@ If a generic skill (shadcn, coss, Vercel) conflicts with these files, **this doc
 | DB                   | Drizzle in `packages/db`                                                      |
 | Toasts               | `toastManager` from `@sycom-learn/ui/components/toast`                        |
 | Logging              | `@sycom-learn/logger` (`createLoggerWithContext`)                             |
+| Transactional email  | `@sycom-learn/email` (Email SDK + React Email). Never a provider SDK directly |
 | Package manager      | Bun                                                                           |
 
 **Never introduce:** Next.js APIs (`next/link`, `next/image`, `next/navigation`), axios, SWR, Zustand, Redux, TanStack Form, `fetch` to our own API, Sonner, raw `z.string().email()` schemas in a second validation library (Yup/Valibot).
@@ -37,6 +38,7 @@ apps/dashboard          URLs, pages, composition, Start server fns, auth client
 packages/api            tRPC router, procedures, input schemas shared with the client
 packages/auth           Better Auth server
 packages/db             Drizzle schema + migrations
+packages/email          Email SDK client, the Azure adapter, React Email templates
 packages/ui             Primitives, Field/Form, Image, toasts
 packages/env            Env validation
 packages/logger         Pino
