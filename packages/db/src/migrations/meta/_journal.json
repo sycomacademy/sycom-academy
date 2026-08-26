@@ -43,6 +43,13 @@
       "when": 1787701759766,
       "tag": "0005_two_factor_passkey_last_login",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787753553727,
+      "tag": "0006_profile_trigger",
+      "breakpoints": true
     }
   ]
 }

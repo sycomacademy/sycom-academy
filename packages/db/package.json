@@ -19,9 +19,11 @@
     "check-types": "tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:deploy": "drizzle-kit migrate",
+    "db:migrate:deploy": "drizzle-kit migrate && bun run src/sql/apply.ts",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate && bun run src/sql/apply.ts",
+    "db:apply-sql": "bun run src/sql/apply.ts",
+    "db:verify": "bun run src/sql/verify.ts"
   },
   "dependencies": {
     "@sycom-learn/env": "workspace:*",

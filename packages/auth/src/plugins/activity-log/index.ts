@@ -6,7 +6,6 @@ import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import {
   didFail,
   failureReason,
-  getEndpointResponse,
   isSignInPath,
   resolveIp,
   resolveProvider,
@@ -42,6 +41,22 @@ const SESSION_SCOPED_EVENTS: Record<string, ActivityEvent> = {
   "/change-email": "user.email_change_requested",
   "/unlink-account": "account.unlinked",
 };
+
+/**
+ * Which event, if any, a write to the user row deserves.
+ *
+ * `/verify-email` is captured here rather than in an after-hook because that
+ * endpoint answers a link click: with a `callbackURL` it ends in
+ * `throw ctx.redirect(...)`, so the response carries no body to read the user
+ * out of. The update hook sees the row itself either way. Better Auth's
+ * change-email flow reaches the same endpoint and sets `emailVerified: false`
+ * on its legacy branch, hence the explicit true check.
+ */
+function userUpdateEvent(path: string | undefined, user: Row): ActivityEvent | null {
+  if (path === "/update-user") return "user.updated";
+  if (path === "/verify-email" && user.emailVerified === true) return "user.email_verified";
+  return null;
+}
 
 /**
  * Records auth activity to our own `activity` table.
@@ -108,14 +123,14 @@ export function activityLog(options: ActivityLogOptions) {
               },
               update: {
                 after: async (user: Row, context) => {
-                  // Fires for every internal write to the user row (other
-                  // plugins included), so it is narrowed to the explicit
-                  // profile-update endpoint.
-                  if (context?.path !== "/update-user") return;
-                  await safely("user.updated", () => {
+                  // Fires for every internal write to the user row, other
+                  // plugins included, so it is narrowed to the paths worth a row.
+                  const event = userUpdateEvent(context?.path, user);
+                  if (!event) return;
+                  await safely(event, () => {
                     record(context, {
                       ...baseRow(context as EventContext | null),
-                      event: "user.updated",
+                      event,
                       actorId: str(user.id),
                       actorName: str(user.name),
                       actorEmail: str(user.email),
@@ -278,9 +293,10 @@ export function activityLog(options: ActivityLogOptions) {
               }),
             },
             {
-              matcher: (context) =>
-                context.path === "/reset-password" ||
-                (typeof context.path === "string" && context.path.startsWith("/reset-password/")),
+              // Exactly the POST that sets the new password. `/reset-password/:token`
+              // is the GET a link click lands on: it only checks the token and
+              // redirects to the form, so it is not a password reset.
+              matcher: (context) => context.path === "/reset-password",
               handler: createAuthMiddleware(async (raw) => {
                 const ctx = raw as unknown as EventContext;
                 await safely("user.password_reset", () => {
@@ -291,24 +307,6 @@ export function activityLog(options: ActivityLogOptions) {
                   record(raw, {
                     ...baseRow(ctx),
                     event: "user.password_reset",
-                  });
-                });
-              }),
-            },
-            {
-              matcher: (context) => context.path === "/verify-email",
-              handler: createAuthMiddleware(async (raw) => {
-                const ctx = raw as unknown as EventContext;
-                await safely("user.email_verified", async () => {
-                  const response = await getEndpointResponse<{ user?: Row }>(ctx);
-                  const user = response?.user;
-                  if (!user) return;
-                  record(raw, {
-                    ...baseRow(ctx),
-                    event: "user.email_verified",
-                    actorId: str(user.id),
-                    actorName: str(user.name),
-                    actorEmail: str(user.email),
                   });
                 });
               }),

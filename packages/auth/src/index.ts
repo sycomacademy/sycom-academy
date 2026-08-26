@@ -1,4 +1,4 @@
-import { createDb } from "@sycom-learn/db";
+import { db } from "@sycom-learn/db";
 import * as schema from "@sycom-learn/db/schema";
 import { env } from "@sycom-learn/env/server";
 import { betterAuth } from "better-auth";
@@ -11,13 +11,10 @@ import { lastLoginMethodPlugin } from "./configs/last-login-method";
 import { logger } from "./configs/logger";
 import { organizationPlugin } from "./configs/organization";
 import { passkeyPlugin } from "./configs/passkey";
-import { createProfile } from "./configs/profile";
 import { twoFactorPlugin } from "./configs/two-factor";
 import { activityLog } from "./plugins/activity-log";
 
 export function createAuth() {
-  const db = createDb();
-
   return betterAuth({
     appName: "Sycom Academy",
     database: drizzleAdapter(db, {
@@ -41,13 +38,6 @@ export function createAuth() {
     },
     advanced: {
       cookiePrefix: "sycom",
-    },
-    databaseHooks: {
-      user: {
-        create: {
-          after: (user) => createProfile(db, user),
-        },
-      },
     },
     plugins: [
       adminPlugin,

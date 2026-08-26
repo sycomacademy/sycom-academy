@@ -52,7 +52,8 @@
     "vm:status": "./scripts/access-vm.sh status",
     "db:token": "./scripts/db-token.sh",
     "db:password": "./scripts/db-password.sh",
-    "check": "oxlint && oxfmt --write"
+    "check": "oxlint && oxfmt --write",
+    "db:verify": "turbo run db:verify -F @sycom-learn/db --"
   },
   "dependencies": {
     "@sycom-learn/env": "workspace:*",

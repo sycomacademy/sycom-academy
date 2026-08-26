@@ -20,26 +20,26 @@ export type EventContext = {
 };
 
 /**
- * Copied from `better-auth/dist/utils/plugin-helper.mjs`. Better Auth uses this
- * internally but does not export it, so the ~10 lines live here instead.
+ * The HTTP status an endpoint settled on, or null when it returned a plain
+ * value rather than a Response or an APIError.
  */
-export async function getEndpointResponse<T>(ctx: EventContext): Promise<T | null> {
-  const returned = ctx.context.returned;
-  if (!returned) return null;
-  if (returned instanceof Response) {
-    if (returned.status !== 200) return null;
-    return (await returned.clone().json()) as T;
-  }
-  if (isAPIError(returned)) return null;
-  return returned as T;
+function statusOf(returned: unknown): number | null {
+  if (isAPIError(returned)) return returned.statusCode;
+  if (returned instanceof Response) return returned.status;
+  return null;
 }
 
-/** Whether the endpoint this hook is observing failed. */
+/**
+ * Whether the endpoint this hook is observing failed.
+ *
+ * Only 4xx and 5xx count. A 3xx is how Better Auth returns success from every
+ * endpoint reached by a link click — the OAuth callback, email verification,
+ * the password-reset token check — and treating those as failures logged a
+ * `sign_in_failed` row for every successful social login.
+ */
 export function didFail(ctx: EventContext): boolean {
-  const returned = ctx.context.returned;
-  if (isAPIError(returned)) return true;
-  if (returned instanceof Response) return returned.status !== 200;
-  return false;
+  const status = statusOf(ctx.context.returned);
+  return status !== null && status >= 400;
 }
 
 /** The failure message, for the metadata column of a failed-attempt row. */
