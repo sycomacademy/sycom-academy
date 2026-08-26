@@ -1,5 +1,11 @@
+import { passkeyClient } from "@better-auth/passkey/client";
 import { orgAc, orgRoles, platformAc, platformRoles } from "@sycom-learn/auth/configs/permissions";
-import { adminClient, organizationClient } from "better-auth/client/plugins";
+import {
+  adminClient,
+  lastLoginMethodClient,
+  organizationClient,
+  twoFactorClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
@@ -12,6 +18,11 @@ export const authClient = createAuthClient({
       ac: orgAc,
       roles: orgRoles,
       teams: { enabled: true },
+    }),
+    twoFactorClient(),
+    passkeyClient(),
+    lastLoginMethodClient({
+      cookieName: "sycom.last_used_login_method",
     }),
   ],
 });

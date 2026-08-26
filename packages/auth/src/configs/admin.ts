@@ -19,6 +19,8 @@ export const customSyntheticUser: CustomSyntheticUser = ({ coreFields, additiona
   banned: false,
   banReason: null,
   banExpires: null,
+  twoFactorEnabled: false,
+  lastLoginMethod: null,
   ...additionalFields,
   id,
 });

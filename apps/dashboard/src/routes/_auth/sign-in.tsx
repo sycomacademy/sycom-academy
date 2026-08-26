@@ -65,7 +65,7 @@ function SignInPage() {
 
   const onSubmit = async (data: SignInInput) => {
     try {
-      const { error } = await authClient.signIn.email({
+      const { data: result, error } = await authClient.signIn.email({
         email: data.email,
         password: data.password,
         rememberMe: data.rememberMe,
@@ -80,6 +80,14 @@ function SignInPage() {
               ? "Verify your email to continue. We just sent you a new link."
               : error.message,
           type: "error",
+        });
+        return;
+      }
+
+      if (result && "twoFactorRedirect" in result && result.twoFactorRedirect) {
+        toastManager.add({
+          title: "Enter your two-factor code to finish signing in.",
+          type: "info",
         });
         return;
       }

@@ -49,7 +49,7 @@ export function failureReason(ctx: EventContext): string | null {
   return returned.message ?? returned.status ?? null;
 }
 
-const SIGN_IN_PATHS = new Set(["/sign-in/email", "/sign-in/social"]);
+const SIGN_IN_PATHS = new Set(["/sign-in/email", "/sign-in/social", "/sign-in/passkey"]);
 
 /**
  * Paths that can produce a session. `/sign-in/social` normally only returns a
@@ -71,6 +71,7 @@ export function resolveProvider(ctx: EventContext | null | undefined): string | 
     return ctx?.params?.id ?? ctx?.params?.providerId ?? path.split("/").pop() ?? null;
   }
   if (path === "/sign-in/email" || path === "/sign-up/email") return "email";
+  if (path === "/sign-in/passkey") return "passkey";
   if (path === "/sign-in/social") {
     const provider = (ctx?.body as { provider?: unknown } | undefined)?.provider;
     return typeof provider === "string" ? provider : "social";

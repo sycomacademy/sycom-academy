@@ -14,6 +14,7 @@
     "auth:generate": "bunx auth generate --config src/cli.ts --output ../db/generated/better-auth.ts --adapter drizzle --dialect postgresql --yes"
   },
   "dependencies": {
+    "@better-auth/passkey": "catalog:",
     "@sycom-learn/db": "workspace:*",
     "@sycom-learn/env": "workspace:*",
     "@sycom-learn/logger": "workspace:*",

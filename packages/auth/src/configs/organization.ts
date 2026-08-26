@@ -12,7 +12,7 @@ export const organizationPlugin = organization({
   },
   schema: {
     team: { modelName: "cohort" },
-    teamMember: { modelName: "cohort_member" },
+    teamMember: { modelName: "cohortMember" },
   },
   allowUserToCreateOrganization: (user) => {
     return user.role === "admin";
